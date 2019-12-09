@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <iostream>
-#include "getopt.h"
+#include <unistd.h>
 
 static int usage(char *argv0) {
 	fprintf(stderr, "usage: %s [OPTIONS] FILE.asc\n"
