@@ -1,0 +1,46 @@
+ascc - standalone AGS script compiler
+-------------------------------------
+
+about
+-----
+
+script compiler factored out from AGS ags3 branch[0], and equipped with a
+C-compiler-like command line frontend.
+
+the preprocessor which was long ago ripped off the original C++ code and turned
+into C#-windows-only code has been restored from old git history of around 2012.
+therefore it's possible that the preprocessor behaves slightly different than
+the one shipping with the GUI.
+
+current status:
+`ascc` can be used to compile .asc files into binary .o files.
+these in turn can be used with `agsutils` agsdisas disassembler and
+agsinject utilities for updating ags' binary .crm or .dat files.
+(read agsutils README for more details).
+
+build
+-----
+
+install a C++ toolchain, then run
+
+    make -jN
+
+where N corresponds to the number of CPU cores in your machine.
+buildtime should be roughly 10 secs with one core.
+
+usage
+-----
+
+ascc [OPTIONS] FILE.asc
+compiles FILE.asc to FILE.o
+
+OPTIONS:
+-i systemheaderdir : provide path to system headers
+   this is the path containing implicitly included headers (atm only agsdefns.sh).
+-E : run preprocessor only (create file with .i extension)
+-W : warn about non-fatal errors parsing system headers
+-g : turn on debug info
+-o : explicitily specify output file name
+
+---
+[0]: base commit: c38b937273f21ec6002cde1dec9b1bead5f7833c.
