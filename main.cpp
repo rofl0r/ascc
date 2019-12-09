@@ -47,7 +47,10 @@ int main(int argc, char** argv) {
 		case 'E': only_preprocess = 1; break;
 		case 'W': ccPrintAllErrors = 1; break;
 		case 'S': disas_flag = 1; break;
-		case 'g': ccDefineMacro("DEBUG", "1"); break;
+		case 'g':
+			ccDefineMacro("DEBUG", "1");
+			ccSetOption(SCOPT_DEBUGRUN, 1);
+			break;
 		default: return usage(argv[0]);
 	}
 	if(!argv[optind]) return usage(argv[0]);

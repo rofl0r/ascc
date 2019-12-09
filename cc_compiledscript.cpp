@@ -221,8 +221,10 @@ void ccCompiledScript::flush_line_numbers() {
     if (next_line) {
         int linum = next_line;
         next_line = 0;
-        write_code(SCMD_LINENUM);
-        write_code(linum);
+        if(ccGetOption(SCOPT_DEBUGRUN)) {
+            write_code(SCMD_LINENUM);
+            write_code(linum);
+        }
     }
 }
 void ccCompiledScript::write_code(int32_t byy) {
