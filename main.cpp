@@ -40,6 +40,7 @@ int main(int argc, char** argv) {
 	int only_preprocess = 0;
 	int disas_flag = 0;
 	char oname_buf[2048], *oname = oname_buf;
+	ccSetOption(SCOPT_LINENUMBERS, 0);
 	static char *systemhdr_dir = "systemhdrs";
 	while((c = getopt(argc, argv, "gWESi:o:")) != EOF) switch(c) {
 		case 'i': systemhdr_dir = optarg; break;
@@ -49,7 +50,7 @@ int main(int argc, char** argv) {
 		case 'S': disas_flag = 1; break;
 		case 'g':
 			ccDefineMacro("DEBUG", "1");
-			ccSetOption(SCOPT_DEBUGRUN, 1);
+			ccSetOption(SCOPT_LINENUMBERS, 1);
 			break;
 		default: return usage(argv[0]);
 	}
@@ -80,7 +81,6 @@ int main(int argc, char** argv) {
         ccSetSoftwareVersion("3.5.0.12");
 
         ccSetOption(SCOPT_EXPORTALL, 1);
-        ccSetOption(SCOPT_LINENUMBERS, 1);
         // Don't allow them to override imports in the room script
 	// FIXME better check for whether it's a roomfile
         ccSetOption(SCOPT_NOIMPORTOVERRIDE, !!strstr(filename, "room") );
