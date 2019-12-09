@@ -19,6 +19,7 @@ static int usage(char *argv0) {
 	"-W : warn about non-fatal errors parsing system headers\n"
 	"-g : turn on debug info\n"
 	"-o : explicitily specify output file name\n"
+	"-S : write textual assembly instead of binary (requires agsdisas)\n"
 	, argv0);
 	return 1;
 }
@@ -37,13 +38,15 @@ char *slurp_file(FILE *f) {
 int main(int argc, char** argv) {
 	int c;
 	int only_preprocess = 0;
+	int disas_flag = 0;
 	char oname_buf[2048], *oname = oname_buf;
 	static char *systemhdr_dir = "systemhdrs";
-	while((c = getopt(argc, argv, "gWEi:o:")) != EOF) switch(c) {
+	while((c = getopt(argc, argv, "gWESi:o:")) != EOF) switch(c) {
 		case 'i': systemhdr_dir = optarg; break;
 		case 'o': oname = optarg; break;
 		case 'E': only_preprocess = 1; break;
 		case 'W': ccPrintAllErrors = 1; break;
+		case 'S': disas_flag = 1; break;
 		case 'g': ccDefineMacro("DEBUG", "1"); break;
 		default: return usage(argv[0]);
 	}
@@ -97,10 +100,12 @@ int main(int argc, char** argv) {
 		ccAddDefaultHeader(hdr, "_BuiltInScriptHeader.ash");
 	}
 	if(oname == oname_buf) {
-		if(!only_preprocess)
-			sprintf(oname, "%s.o", filename_wo_ext);
-		else
+		if(only_preprocess)
 			sprintf(oname, "%s.i", filename_wo_ext);
+		else if(disas_flag)
+			sprintf(oname, "%s.s", filename_wo_ext);
+		else
+			sprintf(oname, "%s.o", filename_wo_ext);
 	}
 
 	f = fopen(filename, "r");
@@ -119,7 +124,10 @@ int main(int argc, char** argv) {
 		char *outp = (char*)malloc(strlen(mem)*2+5000);
 		cc_preprocess(mem, outp);
 		f = fopen(oname, "w");
-		if(!f) goto oname_err;
+		if(!f) {
+			fprintf(stderr, "error opening %s\n", oname);
+			return 1;
+		}
 		fwrite(outp, 1, strlen(outp), f);
 		fclose(f);
 		return ccError != 0;
@@ -131,14 +139,22 @@ int main(int argc, char** argv) {
 		return 1;
 		//std::cout << ccErrorLine;
 	} else {
+		char buf[2048];
+		if(disas_flag) sprintf(buf, "%s.tmp.o", oname);
+		else strcpy(buf, oname);
 		FileWriteStream fout;
-		if(!fout.Open(oname)) {
+		if(!fout.Open(buf)) {
 	oname_err:
-			fprintf(stderr, "error opening %s\n", oname);
+			fprintf(stderr, "error opening %s\n", buf);
 			return 1;
 		}
 		obj->Write(&fout);
 		fout.Close();
+		if(disas_flag) {
+			char cmd[2048 + 64];
+			sprintf(cmd, "agsdisas %s %s", buf, oname);
+			system(cmd);
+		}
 	}
 	return 0;
 }

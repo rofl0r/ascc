@@ -41,6 +41,7 @@ OPTIONS:
 -W : warn about non-fatal errors parsing system headers
 -g : turn on debug info
 -o : explicitily specify output file name
+-S : write textual assembly instead of binary (requires agsdisas)
 
 ---
 [0]: base commit: c38b937273f21ec6002cde1dec9b1bead5f7833c.
