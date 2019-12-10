@@ -1630,7 +1630,7 @@ int get_array_index_into_ax(ccCompiledScript *scrip, long *symlist, int openBrac
     }
   }
 
-  if (multiplySize) {
+  if (multiplySize && sym.entries[arrSym].ssize != 1) {
     // multiply up array index (in AX) by size of array element
     // to get memory offset
     scrip->write_cmd2(SCMD_MUL, SREG_AX, sym.entries[arrSym].ssize);
