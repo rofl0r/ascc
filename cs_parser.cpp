@@ -848,7 +848,7 @@ int process_function_declaration(ccInternalList &targ, ccCompiledScript*scrip,
         cc_error("'void' invalid type for function parameter");
         return -1;
       }
-      int isPointerParam = 0;
+      int isPointerParam = 0, isCharPointer = 0;
       // save the parameter type (numparams starts from 1)
       sym.entries[funcsym].funcparamtypes[numparams % 100] = cursym;
       sym.entries[funcsym].funcParamDefaultValues[numparams % 100] = 0;
@@ -863,10 +863,16 @@ int process_function_declaration(ccInternalList &targ, ccCompiledScript*scrip,
         return -1;
       if (strcmp(sym.get_name(targ.peeknext()), "*") == 0) {
         // pointer
-        sym.entries[funcsym].funcparamtypes[numparams % 100] |= STYPE_POINTER;
-        isPointerParam = 1;
         targ.getnext();
-        if ((sym.entries[cursym].flags & SFLG_MANAGED) == 0) {
+        if(strcmp("char", sym.get_name(cursym)) == 0) {
+          isCharPointer = 1;
+          /* treat the pointer value as if it was an int */
+          sym.entries[funcsym].funcparamtypes[numparams % 100] = sym.normalIntSym;
+        } else {
+          sym.entries[funcsym].funcparamtypes[numparams % 100] |= STYPE_POINTER;
+          isPointerParam = 1;
+        }
+        if ((sym.entries[cursym].flags & SFLG_MANAGED) == 0 && !isCharPointer) {
           // can only point to managed structs
           cc_error("Cannot declare pointer to non-managed type");
           return -1;
@@ -918,13 +924,15 @@ int process_function_declaration(ccInternalList &targ, ccCompiledScript*scrip,
         cursym = targ.getnext();
         sym.entries[cursym].stype = SYM_LOCALVAR;
         sym.entries[cursym].extends = 0;
-        sym.entries[cursym].arrsize = 1;
+        sym.entries[cursym].arrsize = isCharPointer ? 0 : 1;
         sym.entries[cursym].vartype = vartypesym;
-        sym.entries[cursym].ssize = 4; //oldsize;  fix param to 4 bytes for djgpp
+        sym.entries[cursym].ssize = isCharPointer ? 1 : 4; //oldsize;  fix param to 4 bytes for djgpp
         sym.entries[cursym].sscope = nested_level + 1;
         sym.entries[cursym].flags |= SFLG_PARAMETER;
         if (isPointerParam)
           sym.entries[cursym].flags |= SFLG_POINTER;
+        else if (isCharPointer)
+          sym.entries[cursym].flags |= SFLG_ARRAY;
         if (next_is_const)
           sym.entries[cursym].flags |= SFLG_CONST | SFLG_READONLY;
         // the parameters are pushed backwards, so the top of the
@@ -1097,6 +1105,10 @@ int is_string(int valtype) {
   return 0;
 }
 
+static int is_int(int valtype) {
+  return valtype == sym.normalIntSym;
+}
+
 int check_operator_valid_for_type(int *vcpuOpPtr, int type1, int type2) {
   int NULL_TYPE = STYPE_POINTER | sym.nullSym;
   int vcpuOp = *vcpuOpPtr;
@@ -1190,7 +1202,7 @@ int check_type_mismatch(int typeIs, int typeWantsToBe, int orderMatters) {
     numstrings++;
   if (is_string(typeWantsToBe))
     numstrings++;
-  if (numstrings == 1) {
+  if (numstrings == 1 && !(is_int(typeIs) || is_int(typeWantsToBe))) {
     isTypeMismatch = 1;
   }
 
@@ -1275,6 +1287,12 @@ int check_type_mismatch(int typeIs, int typeWantsToBe, int orderMatters) {
     }
   }
   return 0;
+}
+
+static int isCharPointer(int n) {
+  return sym.entries[n].vartype == sym.normalIntSym+1 &&
+         sym.entries[n].flags & SFLG_ARRAY &&
+         sym.entries[n].arrsize == 0;
 }
 
 int isVCPUOperatorBoolean(int scmdtype) {
@@ -1664,6 +1682,9 @@ int parseArrayIndexOffsets(ccCompiledScript *scrip, VariableSymlist *thisClause,
       if (sym.entries[thisClause->syml[0]].flags & SFLG_PROPERTY)
         checkBounds = false;
     }
+    // a char pointer has no known boundaries
+    else if(isCharPointer(thisClause->syml[0]))
+      checkBounds = false;
 
     // the value to write is in AX; preserve it
     if (writingOperation)
@@ -1958,6 +1979,8 @@ int do_variable_memory_access(ccCompiledScript *scrip, int variableSym,
     else if (mainVariableType == SYM_LOCALVAR) {
       // a local one
       scrip->write_cmd1(SCMD_LOADSPOFFS, scrip->cur_sp - soffset);
+      // load pointer value from stack slot
+      if(isCharPointer(variableSym)) scrip->write_cmd1(SCMD_MEMREAD, SREG_MAR);
     }
     else {
       // global variable
