@@ -168,8 +168,8 @@ int main(int argc, char** argv) {
 	}
 	ccScript* obj = ccCompileText(mem, q);
 	if(!obj || (ccError != 0)) {
-		std::cout << ccErrorString;
-		std::cout << std::endl;
+		std::cerr << ccErrorString;
+		std::cerr << std::endl;
 		return 1;
 		//std::cout << ccErrorLine;
 	} else {
