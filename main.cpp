@@ -171,6 +171,7 @@ int main(int argc, char** argv) {
 		case 'g':
 			add_macro("DEBUG", "1");
 			ccSetOption(SCOPT_LINENUMBERS, 1);
+			ccSetOption(SCOPT_CHECKBOUNDS, 1);
 			break;
 		default: return usage(argv[0]);
 	}

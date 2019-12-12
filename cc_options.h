@@ -27,6 +27,7 @@
 #define SCOPT_NOIMPORTOVERRIDE (1<<5)   // do not allow an import to be re-declared
 #define SCOPT_LEFTTORIGHT      (1<<6)   // left-to-right operator precedance
 #define SCOPT_OLDSTRINGS       (1<<7)   // allow old-style strings
+#define SCOPT_CHECKBOUNDS      (1<<8)   // emit array boundary check instructions. makes code slower but could be helpful for debugging.
 
 extern void ccSetOption(int, int);
 extern int ccGetOption(int);

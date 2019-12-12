@@ -1643,7 +1643,7 @@ int get_array_index_into_ax(ccCompiledScript *scrip, long *symlist, int openBrac
     return -1;
   }
 
-  if (checkBounds) {
+  if (checkBounds && ccGetOption(SCOPT_CHECKBOUNDS)) {
     // check the array bounds that have been calculated in AX,
     // before they are added to the overall offset
     if ((sym.entries[arrSym].flags & SFLG_DYNAMICARRAY) == 0)
