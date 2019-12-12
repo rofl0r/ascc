@@ -372,10 +372,14 @@ int remove_locals(int from_level, int just_count, ccCompiledScript *scrip) {
                     totalsub += 4;
                 else
                 {
-                    totalsub += sym.entries[cc].ssize;
                     // remove all elements if array
-                    if (sym.entries[cc].flags & SFLG_ARRAY)
-                        totalsub += (sym.entries[cc].arrsize - 1) * sym.entries[cc].ssize;
+                    if (sym.entries[cc].flags & SFLG_ARRAY) {
+                        if(sym.entries[cc].arrsize == 0) /* raw pointer */
+                          totalsub += 4;
+                        else
+                          totalsub += (sym.entries[cc].arrsize) * sym.entries[cc].ssize;
+                    } else
+                        totalsub += sym.entries[cc].ssize;
                 }
                 if (sym.entries[cc].flags & SFLG_STRBUFFER)
                     totalsub += STRING_LENGTH;
@@ -925,7 +929,7 @@ int process_function_declaration(ccInternalList &targ, ccCompiledScript*scrip,
         sym.entries[cursym].stype = SYM_LOCALVAR;
         sym.entries[cursym].extends = 0;
         sym.entries[cursym].arrsize = isCharPointer ? 0 : 1;
-        sym.entries[cursym].vartype = vartypesym;
+        sym.entries[cursym].vartype = isCharPointer ? sym.normalIntSym : vartypesym;
         sym.entries[cursym].ssize = isCharPointer ? 1 : 4; //oldsize;  fix param to 4 bytes for djgpp
         sym.entries[cursym].sscope = nested_level + 1;
         sym.entries[cursym].flags |= SFLG_PARAMETER;
@@ -1290,7 +1294,7 @@ int check_type_mismatch(int typeIs, int typeWantsToBe, int orderMatters) {
 }
 
 static int isCharPointer(int n) {
-  return sym.entries[n].vartype == sym.normalIntSym+1 &&
+  return sym.entries[n].vartype == sym.normalIntSym &&
          sym.entries[n].flags & SFLG_ARRAY &&
          sym.entries[n].arrsize == 0;
 }
@@ -1979,8 +1983,6 @@ int do_variable_memory_access(ccCompiledScript *scrip, int variableSym,
     else if (mainVariableType == SYM_LOCALVAR) {
       // a local one
       scrip->write_cmd1(SCMD_LOADSPOFFS, scrip->cur_sp - soffset);
-      // load pointer value from stack slot
-      if(isCharPointer(variableSym)) scrip->write_cmd1(SCMD_MEMREAD, SREG_MAR);
     }
     else {
       // global variable
@@ -1997,7 +1999,7 @@ int do_variable_memory_access(ccCompiledScript *scrip, int variableSym,
       }
     }
 
-    if (extraoffset)
+    if (extraoffset && !isCharPointer(variableSym))
     {
       if (isDynamicArray)
       {
@@ -2021,7 +2023,19 @@ int do_variable_memory_access(ccCompiledScript *scrip, int variableSym,
       scrip->write_cmd1(SCMD_MEMREADPTR, SREG_AX);
     else if (addressof)
       scrip->write_cmd2(SCMD_REGTOREG,SREG_MAR,SREG_AX);
-    else
+    else if(isCharPointer(variableSym)) {
+      if (extraoffset) {
+        // load pointer value into mar
+        scrip->write_cmd1(SCMD_MEMREAD, SREG_MAR);
+        // add offset
+        scrip->write_cmd2(SCMD_ADDREG,SREG_MAR,SREG_CX);
+        // read pointed-to value
+        scrip->write_cmd1(readcmd,SREG_AX);
+      } else {
+        // put pointer value into AX
+        scrip->write_cmd1(SCMD_MEMREAD, SREG_AX);
+      }
+    } else
       scrip->write_cmd1(readcmd,SREG_AX);
     }
   else if (mainVariableType == SYM_STRING) {
@@ -2334,7 +2348,8 @@ int do_variable_ax(int slilen,long*syml,ccCompiledScript*scrip,int writing, int 
       if ((thisClause->len == 1) ||
           (sym.get_type(thisClause->syml[1]) != SYM_OPENBRACKET)) {
 
-        if ((sym.entries[variableSym].flags & SFLG_DYNAMICARRAY) == 0)
+        if ((sym.entries[variableSym].flags & SFLG_DYNAMICARRAY) == 0
+           && sym.entries[variableSym].arrsize != 0)
         {
           getAddressOnlyIntoAX = true;
           cannotAssign = true;
@@ -3053,6 +3068,7 @@ int evaluate_assignment(ccInternalList *targ, ccCompiledScript *scrip, bool expe
         }
         isAccessingDynamicArray = true;
     }
+    else if (isCharPointer(cursym) && (lilen < 2)) { }
     else if (((sym.entries[cursym].flags & SFLG_ARRAY) != 0) && (lilen < 2))
     {
         cc_error("cannot assign value to entire array");
@@ -3151,7 +3167,7 @@ int evaluate_assignment(ccInternalList *targ, ccCompiledScript *scrip, bool expe
 
 int parse_variable_declaration(long cursym,int *next_type,int isglobal,
     int varsize,ccCompiledScript*scrip,ccInternalList*targ, int vtwas,
-    int isPointer) {
+    int isPointer, int isCharPointer) {
   long lbuffer = 0;
   std::vector<char> xbuffer;
   long *getsvalue = &lbuffer;
@@ -3176,14 +3192,23 @@ int parse_variable_declaration(long cursym,int *next_type,int isglobal,
 
   sym.entries[cursym].extends = 0;
   sym.entries[cursym].stype = (isglobal != 0) ? SYM_GLOBALVAR : SYM_LOCALVAR;
-  if (isPointer) {
+  if (isCharPointer) {
+    sym.entries[cursym].flags |= SFLG_ARRAY;
+    sym.entries[cursym].vartype = sym.normalIntSym;
+    sym.entries[cursym].arrsize = 0;
+    sym.entries[cursym].ssize = varsize;
+    vtwas = sym.normalIntSym;
     varsize = 4;
+  } else {
+    if (isPointer) {
+      varsize = 4;
+    }
+    sym.entries[cursym].arrsize = 1;
+    sym.entries[cursym].vartype = vtwas;
+    if (isPointer)
+      sym.entries[cursym].flags |= SFLG_POINTER;
+    sym.entries[cursym].ssize = varsize;
   }
-  sym.entries[cursym].ssize = varsize;
-  sym.entries[cursym].arrsize = 1;
-  sym.entries[cursym].vartype = vtwas;
-  if (isPointer)
-    sym.entries[cursym].flags |= SFLG_POINTER;
 
   if (((sym.entries[vtwas].flags & SFLG_MANAGED) == 0) && (isPointer) && (isglobal != 2)) {
     // can only point to managed structs
@@ -3286,7 +3311,8 @@ int parse_variable_declaration(long cursym,int *next_type,int isglobal,
       cc_error("cannot set initial value of imported variables");
       return -1;
     }
-    if ((sym.entries[cursym].flags & (SFLG_ARRAY | SFLG_DYNAMICARRAY)) == SFLG_ARRAY) {
+    if ((sym.entries[cursym].flags & (SFLG_ARRAY | SFLG_DYNAMICARRAY)) == SFLG_ARRAY &&
+         !isCharPointer) {
       cc_error("cannot assign value to array");
       return -1;
     }
@@ -4274,22 +4300,27 @@ int __cc_compile_file(const char*inpl,ccCompiledScript*scrip) {
 
             next_is_noloopcheck = 0;
             int isPointer = 0;
+            int isCharPointer = 0;
             bool isDynamicArray = 0;
             int loopCheckOff = 0;
 
             if (check_not_eof(targ))
                 return -1;
             if (strcmp(sym.get_name(targ.peeknext()), "*") == 0) {
-                // only allow pointers to structs
-                if ((sym.entries[vtwas].flags & SFLG_STRUCTTYPE) == 0) {
-                    cc_error("Cannot create pointer to basic type");
-                    return -1;
+                if (varsize == 1) {
+                    isCharPointer = 1;
+                } else {
+                    // only allow pointers to structs
+                    if ((sym.entries[vtwas].flags & SFLG_STRUCTTYPE) == 0) {
+                        cc_error("Cannot create pointer to basic type");
+                        return -1;
+                    }
+                    if (sym.entries[vtwas].flags & SFLG_AUTOPTR) {
+                        cc_error("Invalid use of '*'");
+                        return -1;
+                    }
+                    isPointer = 1;
                 }
-                if (sym.entries[vtwas].flags & SFLG_AUTOPTR) {
-                    cc_error("Invalid use of '*'");
-                    return -1;
-                }
-                isPointer = 1;
                 targ.getnext();
             }
 
@@ -4405,7 +4436,7 @@ startvarbit:
                 }
 
                 // parse the declaration
-                int reslt = parse_variable_declaration(cursym,&next_type,isglobal,varsize,scrip,&targ,vtwas, isPointer);
+                int reslt = parse_variable_declaration(cursym,&next_type,isglobal,varsize,scrip,&targ,vtwas, isPointer, isCharPointer);
                 if (reslt < 0) return -1;
                 if (reslt == 2) goto startvarbit;
             }
@@ -4681,7 +4712,7 @@ startvarbit:
                                     sym.entries[cursym].flags |= SFLG_READONLY;
 
                                 // parse the declaration
-                                reslt = parse_variable_declaration(cursym, &next_type, 0, varsize, scrip, &targ, vtwas, isPointer);
+                                reslt = parse_variable_declaration(cursym, &next_type, 0, varsize, scrip, &targ, vtwas, isPointer, 0);
                                 if (reslt < 0) return -1;
                             }
                         }
