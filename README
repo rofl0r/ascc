@@ -14,9 +14,20 @@ the one shipping with the GUI.
 
 current status:
 `ascc` can be used to compile .asc files into binary .o files.
-these in turn can be used with `agsutils` agsdisas disassembler and
+these in turn can be used with agsutils[1] agsdisas disassembler and
 agsinject utilities for updating ags' binary .crm or .dat files.
 (read agsutils README for more details).
+
+as a bonus over the standard compiler embedded in the AGS editor software,
+this version has been enhanced with the following features:
+
+- ability to run different preprocessor (like C preprocessor with support
+  for #include, function-like macros, etc.
+
+- support for C-style char* pointers. this allows one to write fast
+  low-level code for agssim, or even for ags games, circumventing the
+  "managed" OOP bloat.
+  (currently, such pointers need to be dereferenced with [] operator).
 
 build
 -----
@@ -33,15 +44,23 @@ usage
 
 ascc [OPTIONS] FILE.asc
 compiles FILE.asc to FILE.o
-
 OPTIONS:
 -i systemheaderdir : provide path to system headers
    this is the path containing implicitly included headers (atm only agsdefns.sh).
+-H 1.ash[:2.ash...] : colon-separated list of headers to include.
+   order matters. AGS editor automatically includes all headers
+   it finds in the game dir, but here you need to specify them.
+-o filename : explicitily specify output file name
+-P preprocessor : use `preprocessor` on files before running the built-in
+   one on them. example: -P "cpp -P". note that you if you use a
+   standard C preprocessor, linenumber directives need to be supressed
+   as in the example cpp command.
+-D macro[=val] : define preprocessor macro
 -E : run preprocessor only (create file with .i extension)
 -W : warn about non-fatal errors parsing system headers
 -g : turn on debug info
--o : explicitily specify output file name
 -S : write textual assembly instead of binary (requires agsdisas)
 
 ---
 [0]: base commit: c38b937273f21ec6002cde1dec9b1bead5f7833c.
+[1]: https://github.com/rofl0r/agsutils
