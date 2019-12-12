@@ -15,10 +15,13 @@ static int usage(char *argv0) {
 	"OPTIONS:\n"
 	"-i systemheaderdir : provide path to system headers\n"
 	"   this is the path containing implicitly included headers (atm only agsdefns.sh).\n"
+	"-H 1.ash[:2.ash...] : colon-separated list of headers to include.\n"
+	"   order matters. AGS editor automatically includes all headers\n"
+	"   it finds in the game dir, but here you need to specify them.\n"
+	"-o filename : explicitily specify output file name\n"
 	"-E : run preprocessor only (create file with .i extension)\n"
 	"-W : warn about non-fatal errors parsing system headers\n"
 	"-g : turn on debug info\n"
-	"-o : explicitily specify output file name\n"
 	"-S : write textual assembly instead of binary (requires agsdisas)\n"
 	, argv0);
 	return 1;
@@ -35,16 +38,45 @@ char *slurp_file(FILE *f) {
 	return mem;
 }
 
+static char *getbasename(char *filename) {
+	char *q = strrchr(filename, '/');
+	/* for windoze folks... */
+	if(!q) q = strrchr(filename, '\\');
+	if(q) q++;
+	else q = filename;
+	return q;
+}
+
+int load_headers(char* headers) {
+	while(*headers) {
+		char *e = strchr(headers, ':');
+		if(e) *e = 0;
+		FILE *f = fopen(headers, "r");
+		if(!f) {
+			fprintf(stderr, "error: could not load header %s: ", headers);
+			perror("");
+			return 0;
+		}
+		char *hdr = slurp_file(f);
+		ccAddDefaultHeader(hdr, getbasename(headers));
+		if(!e) break;
+		else headers = e+1;
+	}
+	return 1;
+}
+
 int main(int argc, char** argv) {
 	int c;
 	int only_preprocess = 0;
 	int disas_flag = 0;
 	char oname_buf[2048], *oname = oname_buf;
+	char *headers = 0;
 	ccSetOption(SCOPT_LINENUMBERS, 0);
 	static char *systemhdr_dir = "systemhdrs";
-	while((c = getopt(argc, argv, "gWESi:o:")) != EOF) switch(c) {
+	while((c = getopt(argc, argv, "gWESi:H:o:")) != EOF) switch(c) {
 		case 'i': systemhdr_dir = optarg; break;
 		case 'o': oname = optarg; break;
+		case 'H': headers = optarg; break;
 		case 'E': only_preprocess = 1; break;
 		case 'W': ccPrintAllErrors = 1; break;
 		case 'S': disas_flag = 1; break;
@@ -94,6 +126,8 @@ int main(int argc, char** argv) {
 	if(!e) return usage(argv[0]);
 	while(p < e) *(q++) = *(p++);
 	*q = 0;
+	q = getbasename(filename_wo_ext);
+
 	FILE *f;
 	sprintf(oname_buf, "%s/agsdefns.sh", systemhdr_dir);
 	f = fopen(oname_buf, "r");
@@ -102,6 +136,8 @@ int main(int argc, char** argv) {
 		char *hdr = slurp_file(f);
 		ccAddDefaultHeader(hdr, "_BuiltInScriptHeader.ash");
 	}
+	if(headers && !load_headers(headers)) return 1;
+
 	if(oname == oname_buf) {
 		if(only_preprocess)
 			sprintf(oname, "%s.i", filename_wo_ext);
@@ -117,11 +153,6 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 	char *mem = slurp_file(f);
-	q = strrchr(filename_wo_ext, '/');
-	/* for windoze folks... */
-	if(!q) q = strrchr(filename_wo_ext, '\\');
-	if(q) q++;
-	else q = filename_wo_ext;
 	if(only_preprocess) {
 		// FIXME, buf may be to small for elab. macro expansions
 		char *outp = (char*)malloc(strlen(mem)*2+5000);
