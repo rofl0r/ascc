@@ -19,14 +19,14 @@
 #ifndef __CC_OPTIONS_H
 #define __CC_OPTIONS_H
 
-#define SCOPT_EXPORTALL      1   // export all functions automatically
-#define SCOPT_SHOWWARNINGS   2   // printf warnings to console
-#define SCOPT_LINENUMBERS    4   // include line numbers in compiled code
-#define SCOPT_AUTOIMPORT     8   // when creating instance, export funcs to other scripts
-#define SCOPT_DEBUGRUN    0x10   // write instructions as they are procssed to log file
-#define SCOPT_NOIMPORTOVERRIDE 0x20 // do not allow an import to be re-declared
-#define SCOPT_LEFTTORIGHT 0x40   // left-to-right operator precedance
-#define SCOPT_OLDSTRINGS  0x80   // allow old-style strings
+#define SCOPT_EXPORTALL        (1<<0)   // export all functions automatically
+#define SCOPT_SHOWWARNINGS     (1<<1)   // printf warnings to console
+#define SCOPT_LINENUMBERS      (1<<2)   // include line numbers in compiled code
+#define SCOPT_AUTOIMPORT       (1<<3)   // when creating instance, export funcs to other scripts
+#define SCOPT_DEBUGRUN         (1<<4)   // write instructions as they are procssed to log file
+#define SCOPT_NOIMPORTOVERRIDE (1<<5)   // do not allow an import to be re-declared
+#define SCOPT_LEFTTORIGHT      (1<<6)   // left-to-right operator precedance
+#define SCOPT_OLDSTRINGS       (1<<7)   // allow old-style strings
 
 extern void ccSetOption(int, int);
 extern int ccGetOption(int);
