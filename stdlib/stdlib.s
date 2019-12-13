@@ -43,6 +43,8 @@ memcpy$3:
 ; len
 	pop dx
 	addi sp, 16
+; save dst, it is required as return value
+	push bx
 	add dx, bx ; dx: dst+len
 label_memcpy_loop1:
 	mr ax, bx
@@ -56,6 +58,7 @@ label_memcpy_loop1:
 	addi cx, 1
 	jmpi label_memcpy_loop1
 label_memcpy_break1:
+	pop ax
 	ret
 strcpy$2: ; arg1: dest, arg2: src
 	ptrstack 12
