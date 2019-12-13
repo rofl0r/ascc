@@ -2,7 +2,7 @@
 for i in tests/*.c ; do
 	printf "testing %s..." "$i"
 	fn="${i%.*}"
-	if ! ./ascc -i DEVNULL -S "$i" ; then
+	if ! ./ascc $ASCCFLAGS -i DEVNULL -S "$i" ; then
 		echo FAIL
 		continue
 	fi
