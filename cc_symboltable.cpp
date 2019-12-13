@@ -8,6 +8,9 @@
 
 symbolTable::symbolTable() {
     normalIntSym = 0;
+    normalCharSym = 0;
+    normalLongSym = 0;
+    normalShortSym = 0;
     normalStringSym = 0;
     normalFloatSym = 0;
     normalVoidSym = 0;
@@ -63,9 +66,9 @@ void symbolTable::reset() {
 
     add_ex("___dummy__sym0",999,0);
     normalIntSym = add_ex("int",SYM_VARTYPE,4);
-    add_ex("char",SYM_VARTYPE,1);
-    add_ex("long",SYM_VARTYPE,4);
-    add_ex("short",SYM_VARTYPE,2);
+    normalCharSym = add_ex("char",SYM_VARTYPE,1);
+    normalLongSym = add_ex("long",SYM_VARTYPE,4);
+    normalShortSym = add_ex("short",SYM_VARTYPE,2);
     normalStringSym = add_ex("string",SYM_VARTYPE,4);
     normalVoidSym = add_ex("void",SYM_VARTYPE,0);
     normalFloatSym = add_ex("float", SYM_VARTYPE, 4);

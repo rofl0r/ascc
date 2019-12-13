@@ -41,6 +41,9 @@ struct SymbolTableEntry {
 struct symbolTable {
 	// index for predefined symbols
     int normalIntSym;
+    int normalCharSym;
+    int normalLongSym;
+    int normalShortSym;
     int normalStringSym;
     int normalFloatSym;
     int normalVoidSym;
