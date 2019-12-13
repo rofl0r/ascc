@@ -1113,11 +1113,23 @@ static int is_int(int valtype) {
   return valtype == sym.normalIntSym;
 }
 
+static int is_integral_type(int valtype) {
+  return valtype == sym.normalIntSym  || valtype == sym.normalLongSym ||
+         valtype == sym.normalCharSym || valtype == sym.normalShortSym;
+}
+
 int check_operator_valid_for_type(int *vcpuOpPtr, int type1, int type2) {
   int NULL_TYPE = STYPE_POINTER | sym.nullSym;
   int vcpuOp = *vcpuOpPtr;
 
   int isError = 0;
+  // it's allowed to add or subtract from a pointer to char.
+  // note that when adding int* and short* support, the addend needs
+  // to be multiplied by the size of the base type, e.g.
+  // int buf[2]; int*x=buf+1; should result in 4 being added to buf's addr.
+  if (is_int(type1) && (type2 == (STYPE_POINTER | sym.normalCharSym)) &&
+      (vcpuOp == SCMD_ADDREG || vcpuOp == SCMD_SUBREG))
+      return 0;
   if ((type1 == sym.normalFloatSym) || (type2 == sym.normalFloatSym)) {
     // some operators not valid on floats
     int changeOpTo = vcpuOp;
