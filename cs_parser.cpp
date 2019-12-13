@@ -852,7 +852,7 @@ int process_function_declaration(ccInternalList &targ, ccCompiledScript*scrip,
         cc_error("'void' invalid type for function parameter");
         return -1;
       }
-      int isPointerParam = 0, isCharPointer = 0;
+      int isPointerParam = 0, isRawPointer = 0;
       // save the parameter type (numparams starts from 1)
       sym.entries[funcsym].funcparamtypes[numparams % 100] = cursym;
       sym.entries[funcsym].funcParamDefaultValues[numparams % 100] = 0;
@@ -868,15 +868,18 @@ int process_function_declaration(ccInternalList &targ, ccCompiledScript*scrip,
       if (strcmp(sym.get_name(targ.peeknext()), "*") == 0) {
         // pointer
         targ.getnext();
-        if(strcmp("char", sym.get_name(cursym)) == 0) {
-          isCharPointer = 1;
+        if(strcmp("char", sym.get_name(cursym)) == 0) isRawPointer = 1;
+        else if (strcmp("int", sym.get_name(cursym)) == 0) isRawPointer = 4;
+        else if (strcmp("short", sym.get_name(cursym)) == 0) isRawPointer = 2;
+        else if (strcmp("long", sym.get_name(cursym)) == 0 ) isRawPointer = 4;
+        if(isRawPointer) {
           /* treat the pointer value as if it was an int */
           sym.entries[funcsym].funcparamtypes[numparams % 100] = sym.normalIntSym;
         } else {
           sym.entries[funcsym].funcparamtypes[numparams % 100] |= STYPE_POINTER;
           isPointerParam = 1;
         }
-        if ((sym.entries[cursym].flags & SFLG_MANAGED) == 0 && !isCharPointer) {
+        if ((sym.entries[cursym].flags & SFLG_MANAGED) == 0 && !isRawPointer) {
           // can only point to managed structs
           cc_error("Cannot declare pointer to non-managed type");
           return -1;
@@ -928,14 +931,14 @@ int process_function_declaration(ccInternalList &targ, ccCompiledScript*scrip,
         cursym = targ.getnext();
         sym.entries[cursym].stype = SYM_LOCALVAR;
         sym.entries[cursym].extends = 0;
-        sym.entries[cursym].arrsize = isCharPointer ? 0 : 1;
-        sym.entries[cursym].vartype = isCharPointer ? sym.normalIntSym : vartypesym;
-        sym.entries[cursym].ssize = isCharPointer ? 1 : 4; //oldsize;  fix param to 4 bytes for djgpp
+        sym.entries[cursym].arrsize = isRawPointer ? 0 : 1;
+        sym.entries[cursym].vartype = isRawPointer ? sym.normalIntSym : vartypesym;
+        sym.entries[cursym].ssize = isRawPointer ? isRawPointer : 4; //oldsize;  fix param to 4 bytes for djgpp
         sym.entries[cursym].sscope = nested_level + 1;
         sym.entries[cursym].flags |= SFLG_PARAMETER;
         if (isPointerParam)
           sym.entries[cursym].flags |= SFLG_POINTER;
-        else if (isCharPointer)
+        else if (isRawPointer)
           sym.entries[cursym].flags |= SFLG_ARRAY;
         if (next_is_const)
           sym.entries[cursym].flags |= SFLG_CONST | SFLG_READONLY;
@@ -1123,12 +1126,10 @@ int check_operator_valid_for_type(int *vcpuOpPtr, int type1, int type2) {
   int vcpuOp = *vcpuOpPtr;
 
   int isError = 0;
-  // it's allowed to add or subtract from a pointer to char.
-  // note that when adding int* and short* support, the addend needs
-  // to be multiplied by the size of the base type, e.g.
-  // int buf[2]; int*x=buf+1; should result in 4 being added to buf's addr.
-  if (is_int(type1) && (type2 == (STYPE_POINTER | sym.normalCharSym)) &&
-      (vcpuOp == SCMD_ADDREG || vcpuOp == SCMD_SUBREG))
+  // it's allowed to add or subtract from a pointer to an integral type.
+  if (is_int(type1) && (type2 & STYPE_POINTER)
+     && (vcpuOp == SCMD_ADDREG || vcpuOp == SCMD_SUBREG)
+     && is_integral_type(type2 & ~STYPE_POINTER))
       return 0;
   if ((type1 == sym.normalFloatSym) || (type2 == sym.normalFloatSym)) {
     // some operators not valid on floats
@@ -1305,7 +1306,7 @@ int check_type_mismatch(int typeIs, int typeWantsToBe, int orderMatters) {
   return 0;
 }
 
-static int isCharPointer(int n) {
+static int isRawPointer(int n) {
   return sym.entries[n].vartype == sym.normalIntSym &&
          sym.entries[n].flags & SFLG_ARRAY &&
          sym.entries[n].arrsize == 0;
@@ -1699,7 +1700,7 @@ int parseArrayIndexOffsets(ccCompiledScript *scrip, VariableSymlist *thisClause,
         checkBounds = false;
     }
     // a char pointer has no known boundaries
-    else if(isCharPointer(thisClause->syml[0]))
+    else if(isRawPointer(thisClause->syml[0]))
       checkBounds = false;
 
     // the value to write is in AX; preserve it
@@ -2011,7 +2012,7 @@ int do_variable_memory_access(ccCompiledScript *scrip, int variableSym,
       }
     }
 
-    if (extraoffset && !isCharPointer(variableSym))
+    if (extraoffset && !isRawPointer(variableSym))
     {
       if (isDynamicArray)
       {
@@ -2035,7 +2036,7 @@ int do_variable_memory_access(ccCompiledScript *scrip, int variableSym,
       scrip->write_cmd1(SCMD_MEMREADPTR, SREG_AX);
     else if (addressof)
       scrip->write_cmd2(SCMD_REGTOREG,SREG_MAR,SREG_AX);
-    else if(isCharPointer(variableSym)) {
+    else if(isRawPointer(variableSym)) {
       if (extraoffset) {
         // load pointer value into mar
         scrip->write_cmd1(SCMD_MEMREAD, SREG_MAR);
@@ -2642,6 +2643,13 @@ int parse_sub_expr(long*symlist,int listlen,ccCompiledScript*scrip) {
     scrip->push_reg(SREG_AX);
     if (parse_sub_expr(&symlist[oploc+1],listlen-(oploc+1),scrip))
       return -1;
+    if ((vcpuOperator == SCMD_SUBREG || vcpuOperator == SCMD_ADDREG)
+    && (sym.entries[symlist[oploc-1]].flags & SFLG_ARRAY)
+    && sym.entries[symlist[oploc-1]].ssize > 1
+    && is_integral_type(sym.entries[symlist[oploc-1]].vartype)) {
+      scrip->write_cmd2(SCMD_LITTOREG, SREG_BX, sym.entries[symlist[oploc-1]].ssize);
+      scrip->write_cmd2(SCMD_MULREG, SREG_AX, SREG_BX);
+    }
     scrip->pop_reg(SREG_BX);
 
     if (check_type_mismatch(scrip->ax_val_type, valtypewas, 0))
@@ -3080,7 +3088,7 @@ int evaluate_assignment(ccInternalList *targ, ccCompiledScript *scrip, bool expe
         }
         isAccessingDynamicArray = true;
     }
-    else if (isCharPointer(cursym) && (lilen < 2)) { }
+    else if (isRawPointer(cursym) && (lilen < 2)) { }
     else if (((sym.entries[cursym].flags & SFLG_ARRAY) != 0) && (lilen < 2))
     {
         cc_error("cannot assign value to entire array");
@@ -3111,7 +3119,10 @@ int evaluate_assignment(ccInternalList *targ, ccCompiledScript *scrip, bool expe
         if (check_operator_valid_for_type(&cpuOp, scrip->ax_val_type, 0))
             return -1;
 
-        scrip->write_cmd2(cpuOp, SREG_AX, 1);
+        int addend = 1;
+        if (isRawPointer(cursym)) addend = sym.entries[cursym].ssize;
+
+        scrip->write_cmd2(cpuOp, SREG_AX, addend);
 
         if (!readonly_cannot_cause_error) {
             MARIntactAssumption = 1;
@@ -3126,6 +3137,19 @@ int evaluate_assignment(ccInternalList *targ, ccCompiledScript *scrip, bool expe
 
     if (sym.get_type(asstype) == SYM_MASSIGN) {
         // it's a += or -=, so read in and adjust the result
+        int cpuOp = sym.entries[asstype].ssize;
+
+        if(isRawPointer(cursym) && sym.entries[cursym].ssize != 1) {
+            if (!(cpuOp == SCMD_SUBREG || cpuOp == SCMD_ADDREG)) {
+                cc_error("invalid operation for raw pointer");
+                return -1;
+            }
+            // got to multiply the addend by pointed-to size
+            scrip->write_cmd2(SCMD_LITTOREG, SREG_BX, sym.entries[cursym].ssize);
+            scrip->write_cmd2(SCMD_MULREG, SREG_AX, SREG_BX);
+        }
+
+        // ax contains the addend
         scrip->push_reg(SREG_AX);
         int varTypeRHS = scrip->ax_val_type;
 
@@ -3133,8 +3157,6 @@ int evaluate_assignment(ccInternalList *targ, ccCompiledScript *scrip, bool expe
             return -1;
         if (check_type_mismatch(varTypeRHS, scrip->ax_val_type, 1))
             return -1;
-
-        int cpuOp = sym.entries[asstype].ssize;
 
         if (check_operator_valid_for_type(&cpuOp, varTypeRHS, scrip->ax_val_type))
             return -1;
@@ -3179,7 +3201,7 @@ int evaluate_assignment(ccInternalList *targ, ccCompiledScript *scrip, bool expe
 
 int parse_variable_declaration(long cursym,int *next_type,int isglobal,
     int varsize,ccCompiledScript*scrip,ccInternalList*targ, int vtwas,
-    int isPointer, int isCharPointer) {
+    int isPointer, int isRawPointer) {
   long lbuffer = 0;
   std::vector<char> xbuffer;
   long *getsvalue = &lbuffer;
@@ -3204,7 +3226,7 @@ int parse_variable_declaration(long cursym,int *next_type,int isglobal,
 
   sym.entries[cursym].extends = 0;
   sym.entries[cursym].stype = (isglobal != 0) ? SYM_GLOBALVAR : SYM_LOCALVAR;
-  if (isCharPointer) {
+  if (isRawPointer) {
     sym.entries[cursym].flags |= SFLG_ARRAY;
     sym.entries[cursym].vartype = sym.normalIntSym;
     sym.entries[cursym].arrsize = 0;
@@ -3324,7 +3346,7 @@ int parse_variable_declaration(long cursym,int *next_type,int isglobal,
       return -1;
     }
     if ((sym.entries[cursym].flags & (SFLG_ARRAY | SFLG_DYNAMICARRAY)) == SFLG_ARRAY &&
-         !isCharPointer) {
+         !isRawPointer) {
       cc_error("cannot assign value to array");
       return -1;
     }
@@ -4312,7 +4334,7 @@ int __cc_compile_file(const char*inpl,ccCompiledScript*scrip) {
 
             next_is_noloopcheck = 0;
             int isPointer = 0;
-            int isCharPointer = 0;
+            int isRawPointer = 0;
             bool isDynamicArray = 0;
             int loopCheckOff = 0;
 
@@ -4320,7 +4342,12 @@ int __cc_compile_file(const char*inpl,ccCompiledScript*scrip) {
                 return -1;
             if (strcmp(sym.get_name(targ.peeknext()), "*") == 0) {
                 if (varsize == 1) {
-                    isCharPointer = 1;
+                    isRawPointer = 1;
+                } else if (varsize == 2) {
+                    isRawPointer = 2;
+                } else if (!strcmp(sym.get_name(vtwas), "int")
+                       ||  !strcmp(sym.get_name(vtwas), "long")) {
+                    isRawPointer = 4;
                 } else {
                     // only allow pointers to structs
                     if ((sym.entries[vtwas].flags & SFLG_STRUCTTYPE) == 0) {
@@ -4448,7 +4475,7 @@ startvarbit:
                 }
 
                 // parse the declaration
-                int reslt = parse_variable_declaration(cursym,&next_type,isglobal,varsize,scrip,&targ,vtwas, isPointer, isCharPointer);
+                int reslt = parse_variable_declaration(cursym,&next_type,isglobal,varsize,scrip,&targ,vtwas, isPointer, isRawPointer);
                 if (reslt < 0) return -1;
                 if (reslt == 2) goto startvarbit;
             }
