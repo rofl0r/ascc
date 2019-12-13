@@ -178,6 +178,9 @@ int main(int argc, char** argv) {
 	if(!argv[optind]) return usage(argv[0]);
 	char *filename = argv[optind];
 
+	add_macro("__ASCC__", "3");
+	add_macro("__ASCC_MINOR__", "5");
+
 	// Editor/AGS.Editor/AGSEditor.cs
 	add_macro("AGS_NEW_STRINGS", "1");
 	add_macro("AGS_SUPPORTS_IFVER", "1");
