@@ -2045,7 +2045,7 @@ int do_variable_memory_access(ccCompiledScript *scrip, int variableSym,
         scrip->write_cmd1(readcmd,SREG_AX);
       } else {
         // put pointer value into AX
-        scrip->write_cmd1(SCMD_MEMREAD, SREG_AX);
+        scrip->write_cmd1(writing ? SCMD_MEMWRITE : SCMD_MEMREAD, SREG_AX);
       }
     } else
       scrip->write_cmd1(readcmd,SREG_AX);
