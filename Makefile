@@ -32,5 +32,8 @@ ascc: $(ASCC_OBJS)
 clean:
 	rm -f ascc *.o
 
+test:
+	sh test.sh
 
-.PHONY: all clean
+
+.PHONY: all clean test
