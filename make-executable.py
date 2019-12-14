@@ -28,7 +28,12 @@ while 1:
 
 		func = ''
 		funcn = m.groups(0)[0]
-
-	func += s + '\n'
+		# strip off $N suffix, as main can be called with 0, 2 or 3 args
+		if funcn == 'main':
+			func = 'main:\n'
+		else:
+			func = s + '\n'
+	else:
+		func += s + '\n'
 
 outf.write(func)

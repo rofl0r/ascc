@@ -104,7 +104,13 @@ puts$1:
 	subi sp, 8
 	ret
 _start:
-	li ax, main$0
+	mr mar, op
+	memread4 ax
+	addi mar, 4
+;	memread4 mar
+	push mar
+	push ax
+	li ax, main
 	call ax
 	mr bx, ax
 	li ax, 60

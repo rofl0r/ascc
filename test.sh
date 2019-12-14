@@ -7,7 +7,9 @@ for i in tests/*.c ; do
 		continue
 	fi
 	python make-executable.py "$fn".s
-	agssim -i executable.s > test.$$.tmp
+	optargs=
+	test -f "$fn".args && optargs="-- $(cat "$fn".args)"
+	agssim -i executable.s $optargs > test.$$.tmp
 	ret=$?
 	eret=$(cat "$fn".ret)
 	if test $ret != $eret ; then

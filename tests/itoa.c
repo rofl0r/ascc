@@ -1,4 +1,5 @@
-void puts(char*) {}
+#include "funcdecls.h"
+
 void itoa(int number, char* buffer) {
 	int lentest, len = 0, i, start;
 
@@ -24,6 +25,7 @@ void itoa(int number, char* buffer) {
 	} while (number);
 }
 
+#ifndef LIBRARY
 int main() {
 	char buf[128];
 	itoa(-1337, buf);
@@ -36,3 +38,5 @@ int main() {
 	puts(buf);
 	return 1337/70;
 }
+#endif
+
