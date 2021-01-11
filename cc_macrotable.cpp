@@ -1,6 +1,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include "cc_macrotable.h"
 #include "cc_error.h"
 
@@ -46,6 +47,13 @@ void MacroTable::add(char*namm,char*mac) {
     strcpy(name[num],namm);
     macro[num]=(char*)malloc(strlen(mac)+5);
     strcpy(macro[num],mac);
+    size_t l = strlen(mac);
+    // remove trailing whitespace, newlines and the like.
+    // if a macro ends with a newline (as usual when passed from parser)
+    // this would otherwise cause the expanded macro to mess up reported
+    // linenumbers.
+    while(l > 0 && isspace(macro[num][l-1]))
+        macro[num][--l] = 0;
     num++;
 }
 void MacroTable::remove(int index) {
