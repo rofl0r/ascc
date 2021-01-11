@@ -364,8 +364,8 @@ int main(int argc, char** argv) {
 				perror("rename");
 				return 1;
 			}
+			unlink(fn);
 		}
-		unlink(fn);
 	}
 	return 0;
 }
