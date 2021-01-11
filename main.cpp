@@ -214,7 +214,7 @@ int main(int argc, char** argv) {
 	char *headers = 0;
 	char *cppcmd = 0;
 	ccSetOption(SCOPT_LINENUMBERS, 0);
-	static char *systemhdr_dir = "systemhdrs";
+	char *systemhdr_dir = NULL;
 	while((c = getopt(argc, argv, "gWESD:i:H:o:P:")) != EOF) switch(c) {
 		case 'i': systemhdr_dir = optarg; break;
 		case 'o': oname = optarg; break;
@@ -278,10 +278,10 @@ int main(int argc, char** argv) {
 
 	FILE *f;
 
-	snprintf(oname_buf, sizeof oname_buf, "%s/agsdefns.sh", systemhdr_dir);
+	snprintf(oname_buf, sizeof oname_buf, "%s/agsdefns.sh", systemhdr_dir?systemhdr_dir:"systemhdrs");
 	f = fopen(oname_buf, "r");
-	if(!f && search_executable_dir(argv[0], exepath, sizeof exepath)) {
-		snprintf(oname_buf, sizeof oname_buf, "%s/%s/agsdefns.sh", exepath, systemhdr_dir);
+	if(!f && !systemhdr_dir && search_executable_dir(argv[0], exepath, sizeof exepath)) {
+		snprintf(oname_buf, sizeof oname_buf, "%s/%s/agsdefns.sh", exepath, "systemhdrs");
 		f = fopen(oname_buf, "r");
 	}
 	if(!f) fprintf(stderr, "warning: default header agsdefns.sh not found, you may want to set -i to the dir containing it!\n");
