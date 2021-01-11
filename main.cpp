@@ -10,10 +10,18 @@
 #include <unistd.h>
 #include <limits.h>
 
+static const char* apiv[] = {
+	"350", "341", "340", "335", "334", "330", "321", 0
+};
+
 static int usage(char *argv0) {
 	fprintf(stderr, "usage: %s [OPTIONS] FILE.asc\n"
 	"compiles FILE.asc to FILE.o\n"
 	"OPTIONS:\n"
+	"-A api version : specify API version, supported values are\n  ",
+	argv0);
+	for(unsigned i=0;apiv[i];++i) fprintf(stderr, " %s", apiv[i]);
+	fprintf(stderr, "\n   default: 350\n"
 	"-i systemheaderdir : provide path to system headers\n"
 	"   this is the path containing implicitly included headers (atm only agsdefns.sh).\n"
 	"-H 1.ash[:2.ash...] : colon-separated list of headers to include.\n"
@@ -29,7 +37,7 @@ static int usage(char *argv0) {
 	"-W : warn about non-fatal errors parsing system headers\n"
 	"-g : turn on debug info\n"
 	"-S : write textual assembly instead of binary (requires agsdisas)\n"
-	, argv0);
+	);
 	return 1;
 }
 
@@ -213,9 +221,11 @@ int main(int argc, char** argv) {
 	char oname_buf[2048], *oname = oname_buf;
 	char *headers = 0;
 	char *cppcmd = 0;
+	char *req_api = 0;
 	ccSetOption(SCOPT_LINENUMBERS, 0);
 	char *systemhdr_dir = NULL;
-	while((c = getopt(argc, argv, "gWESD:i:H:o:P:")) != EOF) switch(c) {
+	while((c = getopt(argc, argv, "gWESD:A:i:H:o:P:")) != EOF) switch(c) {
+		case 'A': req_api = optarg; break;
 		case 'i': systemhdr_dir = optarg; break;
 		case 'o': oname = optarg; break;
 		case 'H': headers = optarg; break;
@@ -255,14 +265,21 @@ int main(int argc, char** argv) {
 	//add_macro("STRICT_AUDIO", "1");
 	add_macro("NEW_DIALOGOPTS_API", "1");
 
-	static const char* apiv[] = {"321", "330", "334", "335", "340", "341", "350", 0};
 	unsigned i;
-	for(i=0;apiv[i];++i) {
-		char buf[64];
-		sprintf(buf, "SCRIPT_API_v%s", apiv[i]);
-		add_macro(buf, "1");
-		sprintf(buf, "SCRIPT_COMPAT_v%s", apiv[i]);
-		add_macro(buf, "1");
+	{
+		int enable_api = req_api ? 0 : 1;
+		for(i=0;apiv[i];++i) {
+			char buf[64];
+			// enable only requested and lower APIs
+			if(!enable_api && req_api && !strcmp(req_api, apiv[i]))
+				enable_api = 1;
+			if(enable_api) {
+				sprintf(buf, "SCRIPT_API_v%s", apiv[i]);
+				add_macro(buf, "1");
+				sprintf(buf, "SCRIPT_COMPAT_v%s", apiv[i]);
+				add_macro(buf, "1");
+			}
+		}
 	}
 
         ccSetSoftwareVersion("3.5.0.12");
