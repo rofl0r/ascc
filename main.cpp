@@ -232,6 +232,13 @@ int main(int argc, char** argv) {
 		default: return usage(argv[0]);
 	}
 	if(!argv[optind]) return usage(argv[0]);
+	if(optind +1 != argc) {
+		fprintf(stderr, "error: only one filename can be passed.\n"
+				"arguments after first filename:\n");
+		for(c=optind+1;c<argc;c++)
+			fprintf(stderr, "%s\n", argv[c]);
+		return usage(argv[0]);
+	}
 	char *filename = argv[optind];
 
 	add_macro("__ASCC__", "3");
