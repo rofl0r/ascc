@@ -8,6 +8,7 @@
 #include <string.h>
 #include <iostream>
 #include <unistd.h>
+#include <limits.h>
 
 static int usage(char *argv0) {
 	fprintf(stderr, "usage: %s [OPTIONS] FILE.asc\n"
@@ -150,7 +151,62 @@ static int load_headers(char* headers, int ext) {
 	return 1;
 }
 
+static int search_path_bin(const char *bin, char *buf, size_t buflen) {
+	char *p = getenv("PATH"), *o;
+	size_t l;
+	for(;;) {
+		o = buf;
+		l = buflen;
+		while(l && *p && *p != ':') {
+			*(o++) = *(p++);
+			l--;
+		}
+		snprintf(o, l, "/%s", bin);
+		if(access(buf, X_OK) == 0) return 1;
+		if(*p == ':') p++;
+		else if(!p) break;
+	}
+	return 0;
+}
+
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+static int resolve_realname(char *buf, size_t buflen) {
+	char workbuf[PATH_MAX];
+	if(realpath(buf, workbuf)) {
+		snprintf(buf, buflen, "%s", workbuf);
+		if(access(buf, X_OK) == 0) return 1;
+	}
+	return 0;
+}
+
+static int search_executable_path(const char *bin, char *buf, size_t buflen) {
+	snprintf(buf, buflen, "%s", bin);
+	if(access(buf, X_OK) == 0 || search_path_bin(bin, buf, buflen))
+		return resolve_realname(buf, buflen);
+	return 0;
+}
+
+
+#ifdef _WIN32
+#define DIRSEP '\\'
+#else
+#define DIRSEP '/'
+#endif
+static int search_executable_dir(const char *bin, char *buf, size_t buflen) {
+	if(search_executable_path(bin, buf, buflen)) {
+		char *p = strrchr(buf, DIRSEP);
+		if(p) {
+			*p = 0;
+			return 1;
+		}
+	}
+	return 0;
+}
+
 int main(int argc, char** argv) {
+	char exepath[1024];
 	int c;
 	int only_preprocess = 0;
 	int disas_flag = 0;
@@ -221,8 +277,13 @@ int main(int argc, char** argv) {
 	q = getbasename(filename_wo_ext);
 
 	FILE *f;
-	sprintf(oname_buf, "%s/agsdefns.sh", systemhdr_dir);
+
+	snprintf(oname_buf, sizeof oname_buf, "%s/agsdefns.sh", systemhdr_dir);
 	f = fopen(oname_buf, "r");
+	if(!f && search_executable_dir(argv[0], exepath, sizeof exepath)) {
+		snprintf(oname_buf, sizeof oname_buf, "%s/%s/agsdefns.sh", exepath, systemhdr_dir);
+		f = fopen(oname_buf, "r");
+	}
 	if(!f) fprintf(stderr, "warning: default header agsdefns.sh not found, you may want to set -i to the dir containing it!\n");
 	else preproc_add(f, "_BuiltInScriptHeader.ash", !!cppcmd);
 	if(headers && !load_headers(headers, !!cppcmd)) return 1;
