@@ -242,10 +242,10 @@ int main(int argc, char** argv) {
 	add_macro("AGS_SUPPORTS_IFVER", "1");
 
 	// FIXME: these should all be toggled by options
-	add_macro("STRICT", "1");
+	//add_macro("STRICT", "1");
 	add_macro("LRPRECEDENCE", "1");
 	//add_macro("STRICT_STRINGS", "1");
-	add_macro("STRICT_AUDIO", "1");
+	//add_macro("STRICT_AUDIO", "1");
 	add_macro("NEW_DIALOGOPTS_API", "1");
 
 	static const char* apiv[] = {"321", "330", "334", "335", "340", "341", "350", 0};
