@@ -87,7 +87,7 @@ void pre_process_directive(char*dirpt,FMEM*outfl) {
   int shalwas = shal[0];
   shal[0] = 0;
   char dname[150];
-  strcpy(dname,&dirpt[1]);
+  snprintf(dname, sizeof dname, "%s", dirpt+1);
   ags_strlwr(dname);
   shal[0] = shalwas;
   // skip to the next word on the line
