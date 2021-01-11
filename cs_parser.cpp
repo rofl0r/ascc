@@ -3541,7 +3541,10 @@ int __cc_compile_file(const char*inpl,ccCompiledScript*scrip) {
 
         int symType = sym.get_type(cursym);
 
-        if (symType == SYM_OPENBRACE) {
+        if (symType == SYM_QMARK) {
+            cc_error("ternary operator not implemented");
+            return -1;
+        } else if (symType == SYM_OPENBRACE) {
             if (in_func < 0) {
                 cc_error("Unexpected '{'");
                 return -1;

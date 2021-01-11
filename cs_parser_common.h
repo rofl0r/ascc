@@ -76,6 +76,7 @@
 #define SYM_CASE       60
 #define SYM_DEFAULT    61
 #define SYM_LABEL      62 // : appearing at the end of a label
+#define SYM_QMARK      63 // question mark
 
 #define SFLG_PARAMETER  1
 #define SFLG_ARRAY      2
