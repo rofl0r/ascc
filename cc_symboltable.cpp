@@ -146,6 +146,7 @@ void symbolTable::reset() {
     add_ex("autoptr", SYM_AUTOPTR, 0);
     add_ex("noloopcheck", SYM_LOOPCHECKOFF, 0);
     add_ex("builtin", SYM_BUILTIN, 0);
+    add_ex("?", SYM_QMARK, 0);
 }
 int SymbolTableEntry::operatorToVCPUCmd() {
     //return ssize + 8;
