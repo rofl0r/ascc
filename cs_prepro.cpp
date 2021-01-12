@@ -136,28 +136,24 @@ static int directive_to_id(char *dname) {
 }
 
 void pre_process_directive(char*dirpt,FMEM*outfl) {
-  char*shal=dirpt+1;
-  while(is_whitespace(*shal)) ++shal;
-  // seek to the end of the first word (eg. #define)
-  while ((!is_whitespace(shal[0])) && (shal[0]!=0)) shal++;
-/*
-  if (shal[0]==0) {
-    cc_error("unknown preprocessor directive");
-    return;
-  }
-  */
-  // extract the directive name
-  int shalwas = shal[0];
-  shal[0] = 0;
-  char dname[150];
-  snprintf(dname, sizeof dname, "%s", dirpt+1);
-  ags_strlwr(dname);
-  shal[0] = shalwas;
-  // skip to the next word on the line
-  skip_whitespace(&shal);
+	char *p, *shal=dirpt+1;
+	while(is_whitespace(*shal)) ++shal;
+	p = shal;
+	// seek to the end of the first word (eg. #define)
+	while ((!is_whitespace(shal[0])) && (shal[0]!=0)) shal++;
+	// extract the directive name
+	int shalwas = shal[0];
+	shal[0] = 0;
+	char dname[150];
+	snprintf(dname, sizeof dname, "%s", p);
+	ags_strlwr(dname);
+	shal[0] = shalwas;
 
-  // write a blank line to the output so that line numbers are correct
-  fmem_puts("",outfl);
+	// skip to the next word on the line
+	skip_whitespace(&shal);
+
+	// write a blank line to the output so that line numbers are correct
+	fmem_puts("",outfl);
 
 	size_t l = strlen(dname);
 	while(l && strchr(" \t\r\n", dname[l-1])) dname[--l] = 0;
