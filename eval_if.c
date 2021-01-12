@@ -301,6 +301,7 @@ static int evaluate_condition(struct tokenizer *t, int *result) {
 	int ret, backslash_seen = 0;
 	struct token curr;
 	char buf[1024], *bufp = buf;
+	*bufp = 0;
 #if 0
 	ret = tokenizer_next(t, &curr);
 	if(!ret) return ret;
