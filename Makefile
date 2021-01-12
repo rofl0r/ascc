@@ -17,12 +17,14 @@ ASCC_SRCS = \
 	cs_compiler.cpp \
 	cc_macrotable.cpp \
 	cs_prepro.cpp \
-
+	tokenizer.c \
+	eval_if.c
 
 TEMPOBJS = $(ASCC_SRCS:.cpp=.o)
 ASCC_OBJS = $(TEMPOBJS:.c=.o)
 
 CXXFLAGS += -fpermissive -O0 -g3
+CFLAGS += -O0 -g3
 
 all: ascc
 

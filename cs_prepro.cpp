@@ -73,8 +73,68 @@ void get_next_word(char*stin,char*wo, bool includeDots = false) {
   return;
 }
 
+extern "C" {
+extern int evaluate_if_statement(char *str);
+int expand_macro(char* name, char* out) {
+	int ret = macros.find_name(name);
+	if(ret >= 0) strcat(out, macros.macro[ret]);
+	return ret >= 0;
+}
+void c_cc_error(char *msg) { cc_error(msg); }
+}
+
+enum directive_id {
+	di_include = 0,
+	di_error,
+	di_warning,
+	di_define,
+	di_undef,
+	di_if,
+	di_elif,
+	di_else,
+	di_ifdef,
+	di_ifndef,
+	di_endif,
+	di_line,
+	di_pragma,
+	di_sectionstart,
+	di_sectionend,
+	di_ifver,
+	di_ifnver,
+	di_last = di_ifnver,
+};
+
+static const char* directives[] = {
+	"include",
+	"error",
+	"warning",
+	"define",
+	"undef",
+	"if",
+	"elif",
+	"else",
+	"ifdef",
+	"ifndef",
+	"endif",
+	"line",
+	"pragma",
+	"sectionstart",
+	"sectionend",
+	"ifver",
+	"ifnver",
+	0
+};
+
+static int directive_to_id(char *dname) {
+	for(int i = 0; i <= di_last; ++i)
+		if(!ags_stricmp(dname, directives[i]))
+			return i;
+	return -1;
+}
+
 void pre_process_directive(char*dirpt,FMEM*outfl) {
-  char*shal=dirpt;
+  char*shal=dirpt+1;
+  while(is_whitespace(*shal)) ++shal;
   // seek to the end of the first word (eg. #define)
   while ((!is_whitespace(shal[0])) && (shal[0]!=0)) shal++;
 /*
@@ -95,116 +155,109 @@ void pre_process_directive(char*dirpt,FMEM*outfl) {
 
   // write a blank line to the output so that line numbers are correct
   fmem_puts("",outfl);
+  size_t l = strlen(dname);
+  while(l && strchr(" \t\r\n", dname[l-1])) dname[--l] = 0;
 
-  if ((ags_stricmp(dname, "ifdef") == 0) ||
-      (ags_stricmp(dname, "ifndef") == 0) ||
-      (ags_stricmp(dname, "ifver") == 0) ||
-      (ags_stricmp(dname, "ifnver") == 0)) {
+  int did = directive_to_id(dname);
+  switch(did) {
+	case di_else:
+		if (!nested_if_level)
+			cc_error("#else without #if");
+		else
+			nested_if_include[nested_if_level-1] = !nested_if_include[nested_if_level-1];
+		return;
+	case di_if:
+	case di_ifdef:
+	case di_ifndef:
+	case di_ifver:
+	case di_ifnver: {
+		if (nested_if_level >= MAX_NESTED_IFDEFS) {
+			cc_error("too many nested #ifdefs");
+			return;
+		}
 
-    if (nested_if_level >= MAX_NESTED_IFDEFS) {
-      cc_error("too many nested #ifdefs");
-      return;
-    }
-    int isVersionCheck = 0;
-    int wantDefined = 1;
+		int is_if = did == di_if;
+		int isVersionCheck = (did == di_ifver || did == di_ifnver);
+		int wantDefined = (did != di_ifndef && did != di_ifnver);
 
-    if (dname[2] == 'n')
-      wantDefined = 0;
+		char macroToCheck[100];
+		get_next_word(shal, macroToCheck, true);
 
-    if (strstr(dname, "ver") != NULL)
-      isVersionCheck = 1;
+		if (macroToCheck[0] == 0) {
+			cc_error("Expected token after space");
+			return;
+		}
 
-    char macroToCheck[100];
-    get_next_word(shal, macroToCheck, true);
+		if ((isVersionCheck) && (!is_digit(macroToCheck[0]))) {
+			cc_error("Expected version number");
+			return;
+		}
 
-    if (macroToCheck[0] == 0) {
-      cc_error("Expected token after space");
-      return;
-    }
+		if ((nested_if_level > 0) && (nested_if_include[nested_if_level - 1] == 0)) {
+			// if nested inside a False one, then this one must be false
+			// as well
+			nested_if_include[nested_if_level] = 0;
+		}
+		else if ((isVersionCheck) && (strcmp(ccSoftwareVersion, macroToCheck) >= 0)) {
+			nested_if_include[nested_if_level] = wantDefined;
+		}
+		else if (is_if) {
+			wantDefined = evaluate_if_statement(shal);
+			nested_if_include[nested_if_level] = wantDefined;
+		}
+		else if ((!isVersionCheck) && (macros.find_name(macroToCheck) >= 0)) {
+			nested_if_include[nested_if_level] = wantDefined;
+		}
+		else {
+			nested_if_include[nested_if_level] = !wantDefined;
+		}
+		nested_if_level++;
+		} break;
+	case di_endif:
+		if (nested_if_level < 1) {
+			cc_error("#endif without #if");
+			return;
+		}
+		nested_if_level--;
+		break;
+	case di_error:
+		cc_error("User error: %s", shal);
+		return;
+	case di_define: {
+		char nambit[100];
+		int nin=0;
+		while ((!is_whitespace(shal[0])) && (shal[0]!=0)) {
+			nambit[nin]=shal[0];
+			nin++;
+			shal++;
+		}
+		nambit[nin]=0;
+		skip_whitespace(&shal);
+		macros.add(nambit,shal);
+		} break;
+	case di_undef: {
+		char macroToCheck[100];
+		get_next_word(shal, macroToCheck);
+		if (macroToCheck[0] == 0) {
+			cc_error("Expected: macro");
+			return;
+		}
 
-    if ((isVersionCheck) && (!is_digit(macroToCheck[0]))) {
-      cc_error("Expected version number");
-      return;
-    }
+		int idx = macros.find_name(macroToCheck);
+		if (idx < 0) {
+			cc_error("'%s' not defined", macroToCheck);
+			return;
+		}
 
-    if ((nested_if_level > 0) && (nested_if_include[nested_if_level - 1] == 0)) {
-      // if nested inside a False one, then this one must be false
-      // as well
-      nested_if_include[nested_if_level] = 0;
-    }
-    else if ((isVersionCheck) && (strcmp(ccSoftwareVersion, macroToCheck) >= 0)) {
-      nested_if_include[nested_if_level] = wantDefined;
-    }
-    else if ((!isVersionCheck) && (macros.find_name(macroToCheck) >= 0)) {
-      nested_if_include[nested_if_level] = wantDefined;
-    }
-    else {
-      nested_if_include[nested_if_level] = !wantDefined;
-    }
-    nested_if_level++;
-  }
-  else if (ags_stricmp(dname, "endif") == 0) {
-    if (nested_if_level < 1) {
-      cc_error("#endif without #if");
-      return;
-    }
-    nested_if_level--;
-  }
-  else if (deletingCurrentLine()) {
-    // inside a non-defined #ifdef block, don't process anything
-  }
-  else if (ags_stricmp(dname, "error") == 0) {
-    cc_error("User error: %s", shal);
-    return;
-  }
-  else if (ags_stricmp(dname,"define")==0) {
-    char nambit[100];
-    int nin=0;
-    while ((!is_whitespace(shal[0])) && (shal[0]!=0)) {
-      nambit[nin]=shal[0];
-      nin++;
-      shal++;
-    }
-    nambit[nin]=0;
-    skip_whitespace(&shal);
-
-    macros.add(nambit,shal);
-  }
-  else if (ags_stricmp(dname, "undef") == 0) {
-    char macroToCheck[100];
-    get_next_word(shal, macroToCheck);
-
-    if (macroToCheck[0] == 0) {
-      cc_error("Expected: macro");
-      return;
-    }
-
-    int idx = macros.find_name(macroToCheck);
-    if (idx < 0) {
-      cc_error("'%s' not defined", macroToCheck);
-      return;
-    }
-
-    macros.remove(idx);
-  }
-  else if ((ags_stricmp(dname, "sectionstart") == 0) ||
-           (ags_stricmp(dname, "sectionend") == 0))
-  {
-    // do nothing - markers for the editor, just remove them
-  }
-/*  else if (ags_stricmp(dname,"include")==0) {
-    if ((shal[0]=='\"') | (shal[0]=='<')) shal++;
-    char inclnam[100];
-    int incp=0;
-    while ((is_alphanum(shal[0])!=0) | (shal[0]=='.')) {
-      inclnam[incp]=shal[0]; shal++; incp++; }
-    inclnam[incp]=0;
-    // TODO:  Should actually include the file/header INCLNAM
-    printf("unimplemented #include of '%s'\n",inclnam);
-//    fmem_puts(inclnam,outfl);
-    }*/
-  else
-    cc_error("unknown preprocessor directive '%s'",dname);
+		macros.remove(idx);
+		} break;
+	case di_sectionstart:
+	case di_sectionend:
+		// do nothing - markers for the editor, just remove them
+		break;
+	default:
+		cc_error("unknown/unimplemented preprocessor directive '%s'",dname);
+	}
 }
 
 
