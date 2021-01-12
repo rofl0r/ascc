@@ -11,7 +11,7 @@
 #include <limits.h>
 
 static const char* apiv[] = {
-	"350", "341", "340", "335", "334", "330", "321", 0
+	"350", "341", "340", "335", "334", "330", "321", "261", 0
 };
 
 static int usage(char *argv0) {
@@ -221,7 +221,7 @@ int main(int argc, char** argv) {
 	char oname_buf[2048], *oname = oname_buf;
 	char *headers = 0;
 	char *cppcmd = 0;
-	char *req_api = 0;
+	char *req_api = "350";
 	ccSetOption(SCOPT_LINENUMBERS, 0);
 	char *systemhdr_dir = NULL;
 	while((c = getopt(argc, argv, "gWESD:A:i:H:o:P:")) != EOF) switch(c) {
@@ -267,12 +267,19 @@ int main(int argc, char** argv) {
 
 	unsigned i;
 	{
-		int enable_api = req_api ? 0 : 1;
+		int enable_api = 0;
+		add_macro("SCRIPT_API", req_api);
 		for(i=0;apiv[i];++i) {
 			char buf[64];
 			// enable only requested and lower APIs
-			if(!enable_api && req_api && !strcmp(req_api, apiv[i]))
-				enable_api = 1;
+			if(!enable_api) {
+				if(!strcmp(req_api, apiv[i]))
+					enable_api = 1;
+			} else
+			// do not activate 3.x APIs for 2.x and vice versa
+				if(req_api[0] != apiv[i][0])
+					enable_api = 0;
+
 			if(enable_api) {
 				sprintf(buf, "SCRIPT_API_v%s", apiv[i]);
 				add_macro(buf, "1");
