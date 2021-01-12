@@ -15,29 +15,6 @@
 // macro defined the deprecated API contents that were still active in
 // corresponding version are kept enabled; otherwise these are disabled.
 
-// Configure STRICT macros: if STRICT compilation mode is enabled
-// setup separate STRICT* modes for thos non-object-oriented API parts
-// that became obsoleted in corresponding version of API.
-// Take compatibility level into consideration here: if the compatibility
-// level is low enough then do NOT declare STRICT* macro.
-#ifdef STRICT
-  #ifdef SCRIPT_API_v330
-    #ifndef SCRIPT_COMPAT_v321
-      #define STRICT_IN_v330
-    #endif
-  #endif
-  #ifdef SCRIPT_API_v340
-    #ifndef SCRIPT_COMPAT_v335
-      #define STRICT_IN_v340
-    #endif
-  #endif
-  #ifdef SCRIPT_API_v3507
-    #ifndef SCRIPT_COMPAT_v350
-      #define STRICT_IN_v3507
-    #endif
-  #endif
-#endif
-
 #define function int  // $AUTOCOMPLETEIGNORE$
 // CursorMode isn't actually defined yet, but int will do
 #define CursorMode int
@@ -415,6 +392,20 @@ enum CharacterDirection {
 };
 #endif
 
+#ifdef SCRIPT_API_v350
+enum StringCompareStyle
+{
+  eCaseInsensitive = 0,
+  eCaseSensitive = 1
+};
+
+enum SortStyle
+{
+  eNonSorted = 0,
+  eSorted = 1
+};
+#endif
+
 internalstring autoptr builtin managed struct String {
   /// Creates a formatted string using the supplied parameters.
   import static String Format(const string format, ...);    // $AUTOCOMPLETESTATICONLY$
@@ -424,29 +415,41 @@ internalstring autoptr builtin managed struct String {
   import String  Append(const string appendText);
   /// Returns a new string that has the extra character appended.
   import String  AppendChar(char extraChar);
-  /// Compares this string to the other string.
-  import int     CompareTo(const string otherString, bool caseSensitive = false);
   import int     Contains(const string needle);   // $AUTOCOMPLETEIGNORE$
   /// Creates a copy of the string.
   import String  Copy();
-  /// Checks whether this string ends with the specified text.
-  import bool    EndsWith(const string endsWithText, bool caseSensitive = false);
   /// Returns the index of the first occurrence of the needle in this string.
   import int     IndexOf(const string needle);
   /// Returns a lower-cased version of this string.
   import String  LowerCase();
-  /// Returns a copy of this string with all occurrences of LookForText replaced with ReplaceWithText
-  import String  Replace(const string lookForText, const string replaceWithText, bool caseSensitive = false);
   /// Returns a new string, with the specified character changed.
   import String  ReplaceCharAt(int index, char newChar);
-  /// Checks whether this string starts with the specified text.
-  import bool    StartsWith(const string startsWithText, bool caseSensitive = false);
   /// Returns a portion of the string.
   import String  Substring(int index, int length);
   /// Truncates the string down to the specified length by removing characters from the end.
   import String  Truncate(int length);
   /// Returns an upper-cased version of this string.
   import String  UpperCase();
+#ifdef SCRIPT_API_v350
+  /// Compares this string to the other string.
+  import int     CompareTo(const string otherString, StringCompareStyle style = eCaseInsensitive);
+  /// Checks whether this string ends with the specified text.
+  import bool    EndsWith(const string endsWithText, StringCompareStyle style = eCaseInsensitive);
+  /// Returns a copy of this string with all occurrences of LookForText replaced with ReplaceWithText
+  import String  Replace(const string lookForText, const string replaceWithText, StringCompareStyle style = eCaseInsensitive);
+  /// Checks whether this string starts with the specified text.
+  import bool    StartsWith(const string startsWithText, StringCompareStyle style = eCaseInsensitive);
+#endif
+#ifndef SCRIPT_API_v350
+  /// Compares this string to the other string.
+  import int     CompareTo(const string otherString, bool caseSensitive = false);
+  /// Checks whether this string ends with the specified text.
+  import bool    EndsWith(const string endsWithText, bool caseSensitive = false);
+  /// Returns a copy of this string with all occurrences of LookForText replaced with ReplaceWithText
+  import String  Replace(const string lookForText, const string replaceWithText, bool caseSensitive = false);
+  /// Checks whether this string starts with the specified text.
+  import bool    StartsWith(const string startsWithText, bool caseSensitive = false);
+#endif
   /// Converts the string to a float.
   readonly import attribute float AsFloat;
   /// Converts the string to an integer.
@@ -461,23 +464,23 @@ internalstring autoptr builtin managed struct String {
 builtin managed struct Dictionary
 {
   /// Creates a new empty Dictionary of the given properties.
-  import static Dictionary* Create(bool sorted = false, bool caseSensitive = false); // $AUTOCOMPLETESTATICONLY$
+  import static Dictionary* Create(SortStyle sortStyle = eNonSorted, StringCompareStyle compareStyle = eCaseInsensitive); // $AUTOCOMPLETESTATICONLY$
 
   /// Removes all items from the dictionary.
   import void Clear();
   /// Tells if given key is in the dictionary.
-  import bool Contains(String key);
+  import bool Contains(const string key);
   /// Gets value by the key; returns null if such key does not exist.
-  import String Get(String key);
+  import String Get(const string key);
   /// Removes key/value pair from the dictionary, fails if there was no such key.
-  import bool Remove(String key);
+  import bool Remove(const string key);
   /// Assigns a value to the given key, adds this key if it did not exist yet.
-  import bool Set(String key, String value);
+  import bool Set(const string key, const string value);
 
   /// Gets if this dictionary is case-sensitive.
-  import readonly attribute bool CaseSensitive;
-  /// Gets if this dictionary is sorted by keys in alphabetical order.
-  import readonly attribute bool Sorted;
+  import readonly attribute StringCompareStyle CompareStyle;
+  /// Gets the method items are arranged in this dictionary.
+  import readonly attribute SortStyle SortStyle;
   /// Gets the number of key/value pairs currently in the dictionary.
   import readonly attribute int ItemCount;
   /// Creates a dynamic array filled with keys in same order as they are stored in the Dictionary.
@@ -489,21 +492,21 @@ builtin managed struct Dictionary
 builtin managed struct Set
 {
   /// Creates a new empty Set of the given properties.
-  import static Set* Create(bool sorted = false, bool caseSensitive = false); // $AUTOCOMPLETESTATICONLY$
+  import static Set* Create(SortStyle sortStyle = eNonSorted, StringCompareStyle compareStyle = eCaseInsensitive); // $AUTOCOMPLETESTATICONLY$
 
   /// Adds item to the set, fails if such item was already existing.
-  import bool Add(String item);
+  import bool Add(const string item);
   /// Removes all items from the set.
   import void Clear();
   /// Tells if given item is in the set.
-  import bool Contains(String item);
+  import bool Contains(const string item);
   /// Removes item from the set, fails if there was no such item.
-  import bool Remove(String item);
+  import bool Remove(const string item);
 
   /// Gets if this set is case-sensitive.
-  import readonly attribute bool CaseSensitive;
-  /// Gets if this set is sorted in alphabetical order.
-  import readonly attribute bool Sorted;
+  import readonly attribute StringCompareStyle CompareStyle;
+  /// Gets the method items are arranged in this set.
+  import readonly attribute SortStyle SortStyle;
   /// Gets the number of items currently in the set.
   import readonly attribute int ItemCount;
   /// Creates a dynamic array filled with items in same order as they are stored in the Set.
@@ -584,7 +587,7 @@ builtin managed struct Camera;
 builtin managed struct Viewport;
 #endif
 
-builtin managed struct Room {
+builtin struct Room {
   /// Gets a custom text property associated with this room.
   import static String GetTextProperty(const string property);
   /// Gets a drawing surface that allows you to manipulate the room background.
@@ -621,7 +624,7 @@ builtin managed struct Room {
 #endif
 };
 
-builtin managed struct Parser {
+builtin struct Parser {
   /// Returns the parser dictionary word ID for the specified word
   import static int    FindWordID(const string wordToFind);
   /// Stores the supplied user text for later use with Said
@@ -651,7 +654,7 @@ import void DisplayMessageBar(int y, int textColor, int backColor, const string 
 import void ResetRoom(int roomNumber);
 /// Checks whether the player has been in the specified room yet.
 import int  HasPlayerBeenInRoom(int roomNumber);
-#ifndef STRICT_IN_v340
+#ifdef SCRIPT_COMPAT_v335
 /// Performs default processing of a mouse click at the specified co-ordinates.
 import void ProcessClick(int x, int y, CursorMode);
 #endif
@@ -705,11 +708,11 @@ import int  GetWalkableAreaAtRoom(int roomX, int roomY);
 #endif
 /// Returns the scaling level at the specified position within the room.
 import int  GetScalingAt (int x, int y);
-#ifndef STRICT_IN_v340
+#ifdef SCRIPT_COMPAT_v335
 /// Gets the specified Custom Property for the current room.
 import int  GetRoomProperty(const string property);
 #endif
-#ifndef STRICT_IN_v3507
+#ifdef SCRIPT_COMPAT_v350
 /// Locks the viewport to stop the screen scrolling automatically.
 import void SetViewport(int x, int y);
 /// Allows AGS to scroll the screen automatically to follow the player character.
@@ -769,7 +772,7 @@ struct Mouse {
   import static attribute bool Visible;
 #ifdef SCRIPT_API_v335
   /// Gets/sets whether the user-defined factors are applied to mouse movement
-  readonly import static attribute bool ControlEnabled;
+  import static attribute bool ControlEnabled;
   /// Gets/sets the mouse speed
   import static attribute float Speed;
 #endif
@@ -1088,7 +1091,7 @@ import void StopDialog();
 /// Determines whether two objects or characters are overlapping each other.
 import int  AreThingsOverlapping(int thing1, int thing2);
 
-#ifndef STRICT_IN_v330
+#ifdef SCRIPT_COMPAT_v321
 /// Sets whether voice and/or text are used in the game.
 import void SetVoiceMode(eVoiceMode);
 /// Sets how the player can skip speech lines.
@@ -1482,12 +1485,14 @@ enum EventType {
   eEventRestoreGame = 9
 };
 
+#ifdef SCRIPT_API_v350
 enum GUIPopupStyle {
   eGUIPopupNormal = 0,
   eGUIPopupMouseYPos = 1,
   eGUIPopupModal = 2,
   eGUIPopupPersistent = 3
 };
+#endif
 
 // forward-declare these so that they can be returned by GUIControl class
 builtin managed struct GUI;
@@ -2022,6 +2027,10 @@ builtin managed struct AudioClip {
   readonly import attribute bool IsAvailable;
   /// Gets the type of audio that this clip contains.
   readonly import attribute AudioType Type;
+#ifdef SCRIPT_API_v350
+  /// Gets the clip's ID number.
+  readonly import attribute int ID;
+#endif
 };
 
 builtin struct System {
@@ -2104,8 +2113,14 @@ enum WalkWhere {
 };
 
 builtin managed struct Object {
+#ifdef SCRIPT_API_v3507
+  /// Animates the object using its current view.
+  import function Animate(int loop, int delay, RepeatStyle=eOnce, BlockingStyle=eBlock, Direction=eForwards, int frame=0);
+#endif
+#ifndef SCRIPT_API_v3507
   /// Animates the object using its current view.
   import function Animate(int loop, int delay, RepeatStyle=eOnce, BlockingStyle=eBlock, Direction=eForwards);
+#endif
   /// Gets the object that is on the screen at the specified co-ordinates.
   import static Object* GetAtScreenXY(int x, int y);    // $AUTOCOMPLETESTATICONLY$
 #ifndef STRICT_STRINGS
@@ -2154,8 +2169,10 @@ builtin managed struct Object {
   readonly import attribute int ID;
   /// Gets/sets whether the object ignores walkable area scaling.
   import attribute bool IgnoreScaling;
+#ifdef SCRIPT_COMPAT_v340
   /// Gets/sets whether the object ignores walk-behind areas.
   import attribute bool IgnoreWalkbehinds;
+#endif
   /// Gets the current loop number during an animation.
   readonly import attribute int  Loop;
   /// Gets whether the object is currently moving.
@@ -2223,8 +2240,14 @@ builtin managed struct Character {
   import function AddInventory(InventoryItem *item, int addAtIndex=SCR_NO_VALUE);
   /// Manually adds a waypoint to the character's movement path.
   import function AddWaypoint(int x, int y);
+#ifdef SCRIPT_API_v3507
+  /// Animates the character using its current locked view.
+  import function Animate(int loop, int delay, RepeatStyle=eOnce, BlockingStyle=eBlock, Direction=eForwards, int frame=0);
+#endif
+#ifndef SCRIPT_API_v3507
   /// Animates the character using its current locked view.
   import function Animate(int loop, int delay, RepeatStyle=eOnce, BlockingStyle=eBlock, Direction=eForwards);
+#endif
 #ifdef SCRIPT_API_v340
   /// Moves the character to another room. If this is the player character, the game will also switch to that room.
   import function ChangeRoom(int room, int x=SCR_NO_VALUE, int y=SCR_NO_VALUE, CharacterDirection direction=eDirectionNone);
@@ -2359,8 +2382,10 @@ builtin managed struct Character {
   /// Gets/sets whether the character ignores region tints and lighting.
   import attribute bool IgnoreLighting;
   import attribute bool IgnoreScaling;       // obsolete. $AUTOCOMPLETEIGNORE$
+#ifdef SCRIPT_COMPAT_v340
   /// Gets/sets whether the character ignores walk-behind areas and is always placed on top.
   import attribute bool IgnoreWalkbehinds; 
+#endif
   /// Accesses the number of each inventory item that the character currently has.
   import attribute int  InventoryQuantity[];
   /// Gets/sets the character's current loop number within its current view.
@@ -2494,7 +2519,7 @@ builtin managed struct Character {
 #endif
   };
 
-builtin managed struct Game {
+builtin struct Game {
   /// Changes the active translation.
   import static bool   ChangeTranslation(const string newTranslationFileName);
   /// Returns true the first time this command is called with this token.
@@ -2586,6 +2611,8 @@ builtin managed struct Game {
 #ifdef SCRIPT_API_v350
   /// Play speech voice-over in non-blocking mode, optionally apply music and sound volume reduction
   import static AudioChannel* PlayVoiceClip(Character*, int cue, bool as_speech = true);
+  /// Simulate a keypress on the keyboard.
+  import static void   SimulateKeyPress(eKeyCode key);
 #endif
 #ifdef SCRIPT_API_v3507
   /// Gets the primary camera
@@ -2660,10 +2687,10 @@ builtin struct GameState {
   int  narrator_speech;
   int  ambient_sounds_persist;
   int  lipsync_speed;
-#ifdef STRICT_IN_v330
+#ifndef SCRIPT_COMPAT_v321
   int  reserved__4;   // $AUTOCOMPLETEIGNORE$
 #endif
-#ifndef STRICT_IN_v330
+#ifdef SCRIPT_COMPAT_v321
   int  close_mouth_end_speech_time;
 #endif
   int  disable_antialiasing;
@@ -2681,18 +2708,18 @@ builtin struct GameState {
   int  screenshot_width;
   int  screenshot_height;
   int  top_bar_font;
-#ifdef STRICT_IN_v330
+#ifndef SCRIPT_COMPAT_v321
   int  reserved__2;   // $AUTOCOMPLETEIGNORE$
 #endif
-#ifndef STRICT_IN_v330
+#ifdef SCRIPT_COMPAT_v321
   int  speech_text_align;
 #endif
   int  auto_use_walkto_points;
   int  inventory_greys_out;
-#ifdef STRICT_IN_v330
+#ifndef SCRIPT_COMPAT_v321
   int  reserved__3;   // $AUTOCOMPLETEIGNORE$
 #endif
-#ifndef STRICT_IN_v330
+#ifdef SCRIPT_COMPAT_v321
   int  skip_speech_specific_key;
 #endif
   int  abort_key;
@@ -2836,7 +2863,9 @@ builtin struct Screen {
 
 import readonly Character *player;
 import Mouse mouse;
+#ifdef SCRIPT_COMPAT_v350
 import System system;
+#endif
 import GameState  game;
 #ifdef SCRIPT_API_v330
 import Object object[MAX_ROOM_OBJECTS];
