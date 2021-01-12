@@ -2933,6 +2933,16 @@ import short savegameindex[50];
 import ColorType palette[256];
 #endif
 
+#if SCRIPT_API < 271000
+#define LIMITS_MAX_CHARACTERS 150
+#elif SCRIPT_API == 271000
+#define LIMITS_MAX_CHARACTERS 300
+#endif
+
+#ifdef LIMITS_MAX_CHARACTERS
+import Character character[LIMITS_MAX_CHARACTERS];
+#endif
+
 #undef CursorMode
 #undef FontType
 #undef AudioType
