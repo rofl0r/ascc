@@ -23,12 +23,18 @@
 #define SCOPT_SHOWWARNINGS     (1<<1)   // printf warnings to console
 #define SCOPT_LINENUMBERS      (1<<2)   // include line numbers in compiled code
 #define SCOPT_AUTOIMPORT       (1<<3)   // when creating instance, export funcs to other scripts
-#define SCOPT_DEBUGRUN         (1<<4)   // write instructions as they are procssed to log file
+#define SCOPT_DEBUGRUN         (1<<4)   // write instructions as they are processed to log file
 #define SCOPT_NOIMPORTOVERRIDE (1<<5)   // do not allow an import to be re-declared
 #define SCOPT_LEFTTORIGHT      (1<<6)   // left-to-right operator precedance
 #define SCOPT_OLDSTRINGS       (1<<7)   // allow old-style strings
 #define SCOPT_CHECKBOUNDS      (1<<8)   // emit array boundary check instructions. makes code slower but could be helpful for debugging.
+#define SCOPT_EXPLICITRET      (1<<9)   // emit explicit 0 return value in non-void functions closing without return
 
+#define SCOPT_NUMOPTS 10
+
+extern const char* ccOptionNameString(int optbit);
+extern const char* ccOptionHelpString(int optbit);
+extern int ccOptionStringToBit(char*);
 extern void ccSetOption(int, int);
 extern int ccGetOption(int);
 

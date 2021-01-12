@@ -3643,7 +3643,8 @@ int __cc_compile_file(const char*inpl,ccCompiledScript*scrip) {
                 return -1;
             }
 
-            if (nested_level == 0 && sym.entries[inFuncSym].funcparamtypes[0] != sym.normalVoidSym) {
+            if (nested_level == 0 && (ccGetOption(SCOPT_EXPLICITRET)!=0) &&
+		sym.entries[inFuncSym].funcparamtypes[0] != sym.normalVoidSym) {
                 // ensure that 0 is returned since they haven't specified anything else
                 scrip->write_cmd2(SCMD_LITTOREG, SREG_AX, 0);
             }
