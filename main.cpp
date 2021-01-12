@@ -2,6 +2,8 @@
 #include "cc_error.h"
 #include "cs_prepro.h"
 #include "cc_options.h"
+#include "script_common.h"
+#include "cs_parser.h"
 #include "myfilestream.h"
 
 #include <stdio.h>
@@ -18,10 +20,13 @@ static int usage(char *argv0) {
 	fprintf(stderr, "usage: %s [OPTIONS] FILE.asc\n"
 	"compiles FILE.asc to FILE.o\n"
 	"OPTIONS:\n"
-	"-A api version : specify API version, supported values are\n  ",
+	"-A API version : specify API version. this affects which functions\n"
+	"   and data items are made available by global header agsdefns.sh.\n"
+	"   supported values are:\n  ",
 	argv0);
 	for(unsigned i=0;apiv[i];++i) fprintf(stderr, " %s", apiv[i]);
 	fprintf(stderr, "\n   default: 350\n"
+	"-a ABI version: same as above, but restricts the emitted bytecode\n"
 	"-i systemheaderdir : provide path to system headers\n"
 	"   this is the path containing implicitly included headers (atm only agsdefns.sh).\n"
 	"-H 1.ash[:2.ash...] : colon-separated list of headers to include.\n"
@@ -224,7 +229,8 @@ int main(int argc, char** argv) {
 	char *req_api = "350";
 	ccSetOption(SCOPT_LINENUMBERS, 0);
 	char *systemhdr_dir = NULL;
-	while((c = getopt(argc, argv, "gWESD:A:i:H:o:P:")) != EOF) switch(c) {
+	while((c = getopt(argc, argv, "gWESD:A:a:i:H:o:P:")) != EOF) switch(c) {
+		case 'a': if(optarg[0] == '2') cc_set_max_command(SCMD_SHIFTRIGHT); break;
 		case 'A': req_api = optarg; break;
 		case 'i': systemhdr_dir = optarg; break;
 		case 'o': oname = optarg; break;
