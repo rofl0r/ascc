@@ -315,6 +315,7 @@ static int evaluate_condition(struct tokenizer *t, int *result) {
 	while(1) {
 		ret = tokenizer_next(t, &curr);
 		if(!ret) return ret;
+		if(curr.type == TT_EOF) break;
 		if(curr.type == TT_IDENTIFIER) {
 			if(!strcmp(t->buf, "defined")) {
 				ret = tokenizer_next(t, &curr);
