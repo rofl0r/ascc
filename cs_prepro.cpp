@@ -18,18 +18,21 @@
 
 
 
-#define MAX_NESTED_IFDEFS 10
-char nested_if_include[MAX_NESTED_IFDEFS];
-int nested_if_level = 0;
-
-int deletingCurrentLine() {
-  if ((nested_if_level > 0) && (nested_if_include[nested_if_level - 1] == 0))
-    return 1;
-
-  return 0;
-}
-
-
+int if_level = 0, if_level_active = 0, if_level_satisfied = 0;
+#define all_levels_active() (if_level_active == if_level)
+#define prev_level_active() (if_level_active == if_level-1)
+#define set_level(X, V) do { \
+		if(if_level_active > X) if_level_active = X; \
+		if(if_level_satisfied > X) if_level_satisfied = X; \
+		if(V != -1) { \
+			if(V) if_level_active = X; \
+			else if(if_level_active == X) if_level_active = X-1; \
+			if(V && if_level_active == X) if_level_satisfied = X; \
+		} \
+		if_level = X; \
+	} while(0)
+#define skip_conditional_block (if_level > if_level_active)
+#define deletingCurrentLine() skip_conditional_block
 
 void get_next_word(char*stin,char*wo, bool includeDots = false) {
   if (stin[0] == '\"') {
@@ -85,18 +88,18 @@ void c_cc_error(char *msg) { cc_error(msg); }
 
 enum directive_id {
 	di_include = 0,
-	di_error,
-	di_warning,
-	di_define,
-	di_undef,
-	di_if,
-	di_elif,
-	di_else,
-	di_ifdef,
-	di_ifndef,
-	di_endif,
-	di_line,
-	di_pragma,
+	di_error, // 1
+	di_warning, // 2
+	di_define, // 3
+	di_undef, // 4
+	di_if, // 5
+	di_elif, // 6
+	di_else, // 7
+	di_ifdef, // 8
+	di_ifndef, // 9
+	di_endif,  // 10
+	di_line,   // 11
+	di_pragma,  // 12
 	di_sectionstart,
 	di_sectionend,
 	di_ifver,
@@ -155,71 +158,19 @@ void pre_process_directive(char*dirpt,FMEM*outfl) {
 
   // write a blank line to the output so that line numbers are correct
   fmem_puts("",outfl);
-  size_t l = strlen(dname);
-  while(l && strchr(" \t\r\n", dname[l-1])) dname[--l] = 0;
 
-  int did = directive_to_id(dname);
-  switch(did) {
-	case di_else:
-		if (!nested_if_level)
-			cc_error("#else without #if");
-		else
-			nested_if_include[nested_if_level-1] = !nested_if_include[nested_if_level-1];
+	size_t l = strlen(dname);
+	while(l && strchr(" \t\r\n", dname[l-1])) dname[--l] = 0;
+
+	int did = directive_to_id(dname);
+	if(skip_conditional_block) switch(did) {
+	case di_include: case di_error: case di_warning:
+	case di_define: case di_undef:
+	case di_line: case di_pragma:
 		return;
-	case di_if:
-	case di_ifdef:
-	case di_ifndef:
-	case di_ifver:
-	case di_ifnver: {
-		if (nested_if_level >= MAX_NESTED_IFDEFS) {
-			cc_error("too many nested #ifdefs");
-			return;
-		}
-
-		int is_if = did == di_if;
-		int isVersionCheck = (did == di_ifver || did == di_ifnver);
-		int wantDefined = (did != di_ifndef && did != di_ifnver);
-
-		char macroToCheck[100];
-		get_next_word(shal, macroToCheck, true);
-
-		if (macroToCheck[0] == 0) {
-			cc_error("Expected token after space");
-			return;
-		}
-
-		if ((isVersionCheck) && (!is_digit(macroToCheck[0]))) {
-			cc_error("Expected version number");
-			return;
-		}
-
-		if ((nested_if_level > 0) && (nested_if_include[nested_if_level - 1] == 0)) {
-			// if nested inside a False one, then this one must be false
-			// as well
-			nested_if_include[nested_if_level] = 0;
-		}
-		else if ((isVersionCheck) && (strcmp(ccSoftwareVersion, macroToCheck) >= 0)) {
-			nested_if_include[nested_if_level] = wantDefined;
-		}
-		else if (is_if) {
-			wantDefined = evaluate_if_statement(shal);
-			nested_if_include[nested_if_level] = wantDefined;
-		}
-		else if ((!isVersionCheck) && (macros.find_name(macroToCheck) >= 0)) {
-			nested_if_include[nested_if_level] = wantDefined;
-		}
-		else {
-			nested_if_include[nested_if_level] = !wantDefined;
-		}
-		nested_if_level++;
-		} break;
-	case di_endif:
-		if (nested_if_level < 1) {
-			cc_error("#endif without #if");
-			return;
-		}
-		nested_if_level--;
-		break;
+	default: break;
+	}
+	switch(did) {
 	case di_error:
 		cc_error("User error: %s", shal);
 		return;
@@ -251,6 +202,74 @@ void pre_process_directive(char*dirpt,FMEM*outfl) {
 
 		macros.remove(idx);
 		} break;
+	case di_if:
+		if(all_levels_active()) {
+			int wantDefined = evaluate_if_statement(shal);
+			set_level(if_level + 1, wantDefined);
+		} else
+			set_level(if_level + 1, 0);
+		break;
+	case di_elif:
+		if(prev_level_active() && if_level_satisfied < if_level) {
+			int wantDefined = evaluate_if_statement(shal);
+			if(wantDefined) {
+				if_level_active = if_level;
+				if_level_satisfied = if_level;
+			}
+		} else if(if_level_active == if_level) {
+			--if_level_active;
+		}
+		break;
+	case di_else:
+		if(prev_level_active() && if_level_satisfied < if_level) {
+			if(1) {
+				if_level_active = if_level;
+				if_level_satisfied = if_level;
+			}
+		} else if(if_level_active == if_level) {
+			--if_level_active;
+		}
+		break;
+	case di_ifdef:
+	case di_ifndef:
+	case di_ifver:
+	case di_ifnver: {
+		int isVersionCheck = (did == di_ifver || did == di_ifnver);
+		int wantDefined, neg = (did == di_ifndef || did == di_ifnver);
+
+		char macroToCheck[100];
+		get_next_word(shal, macroToCheck, true);
+
+		if (macroToCheck[0] == 0) {
+			cc_error("Expected token after space");
+			return;
+		}
+
+		if ((isVersionCheck) && (!is_digit(macroToCheck[0]))) {
+			cc_error("Expected version number");
+			return;
+		}
+
+		if (isVersionCheck)
+			wantDefined = (strcmp(ccSoftwareVersion, macroToCheck) >= 0);
+		else
+			wantDefined = macros.find_name(macroToCheck) >= 0;
+
+		if (neg) wantDefined = !wantDefined;
+
+		if(all_levels_active()) {
+			set_level(if_level + 1, wantDefined);
+		} else {
+			set_level(if_level + 1, 0);
+		}
+		} break;
+	case di_endif:
+		if (if_level < 1) {
+			cc_error("#endif without #if");
+			return;
+		}
+		set_level(if_level-1, -1);
+		break;
 	case di_sectionstart:
 	case di_sectionend:
 		// do nothing - markers for the editor, just remove them
@@ -384,7 +403,7 @@ void cc_preprocess(const char *inpu,char*outp) {
   FMEM*iii=fmem_open(inpu);
   char linebuffer[1200];
   currentline=0;
-  nested_if_level = 0;
+  if_level = if_level_active = if_level_satisfied = 0;
 
   while (!fmem_eof(iii)) {
     fmem_gets(iii,linebuffer);
@@ -414,9 +433,9 @@ void cc_preprocess(const char *inpu,char*outp) {
   fmem_close(temp);
   fmem_close(iii);
 
-  if ((nested_if_level) && (!ccError))
+  if ((if_level) && (!ccError))
     cc_error("missing #endif");
- 
+
 }
 
 
