@@ -38,6 +38,7 @@ start
 #include <vector>
 
 extern int cc_compile(const char*inpl, ccCompiledScript*scrip);
+extern void cc_set_max_command(int op);
 
 // A section of compiled code that needs to be moved or copied to a new location
 struct ccChunk {

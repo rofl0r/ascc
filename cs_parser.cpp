@@ -18,6 +18,14 @@
 #include "fmem.h"
 
 extern int currentline;
+static int compiler_max_command = CC_NUM_SCCMDS - 1;
+// this allows to set the maximum support bytecode op
+// to support codegen and not producing ops not implemented
+// on older engines. currently WIP.
+void cc_set_max_command(int op) {
+	compiler_max_command = op;
+}
+
 
 char ccCopyright[]="ScriptCompiler32 v" SCOM_VERSIONSTR " (c) 2000-2007 Chris Jones and 2011-2014 others";
 static char scriptNameBuffer[256];
@@ -309,9 +317,20 @@ int cc_tokenize(const char*inpl, ccInternalList*targ, ccCompiledScript*scrip) {
     return 0;
 }
 
+// compatibility shim to use more efficient SCMD_LOADSPOFFS only when
+// the engine supports the bytecode.
+static void load_stack_variable(ccCompiledScript *scrip, int offset) {
+	if(compiler_max_command >= SCMD_LOADSPOFFS) {
+		scrip->write_cmd1(SCMD_LOADSPOFFS, offset);
+	} else {
+		scrip->write_cmd2(SCMD_REGTOREG,SREG_SP,SREG_MAR);
+		scrip->write_cmd2(SCMD_SUB,SREG_MAR,offset);
+	}
+}
+
 void free_pointer(int spOffset, int zeroCmd, int arraySym, ccCompiledScript *scrip) {
 
-    scrip->write_cmd1(SCMD_LOADSPOFFS, spOffset);
+    load_stack_variable(scrip, spOffset);
     scrip->write_cmd(zeroCmd);
 
     if ((sym.entries[arraySym].flags & (SFLG_ARRAY | SFLG_DYNAMICARRAY)) == SFLG_ARRAY) {
@@ -1995,7 +2014,7 @@ int do_variable_memory_access(ccCompiledScript *scrip, int variableSym,
     }
     else if (mainVariableType == SYM_LOCALVAR) {
       // a local one
-      scrip->write_cmd1(SCMD_LOADSPOFFS, scrip->cur_sp - soffset);
+      load_stack_variable(scrip, scrip->cur_sp - soffset);
     }
     else {
       // global variable
@@ -2275,7 +2294,7 @@ int do_variable_ax(int slilen,long*syml,ccCompiledScript*scrip,int writing, int 
             scrip->write_cmd2(SCMD_ADD, SREG_MAR, currentByteOffset);
         }
         else if (firstVariableType == SYM_LOCALVAR) {
-          scrip->write_cmd1(SCMD_LOADSPOFFS, scrip->cur_sp - currentByteOffset);
+          load_stack_variable(scrip, scrip->cur_sp - currentByteOffset);
         }
         else if (firstVariableType == SYM_GLOBALVAR) {
 
@@ -3571,7 +3590,7 @@ int __cc_compile_file(const char*inpl,ccCompiledScript*scrip) {
                         // memory address -- convert this to the mem handle
                         // since params are pushed backwards, this works
                         // the +1 is to deal with the return address
-                        scrip->write_cmd1(SCMD_LOADSPOFFS, 4 * (pa + 1));
+                        load_stack_variable(scrip, 4 * (pa + 1));
                         scrip->write_cmd1(SCMD_MEMREAD, SREG_AX);
                         scrip->write_cmd1(SCMD_MEMINITPTR, SREG_AX);
                     }
