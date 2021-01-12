@@ -84,6 +84,9 @@ int expand_macro(char* name, char* out) {
 	if(ret >= 0) strcat(out, macros.macro[ret]);
 	return ret >= 0;
 }
+int defined_macro(char *name) {
+	return macros.find_name(name) >= 0;
+}
 void c_cc_error(char *msg) { cc_error(msg); }
 }
 
