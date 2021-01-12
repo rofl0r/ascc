@@ -268,7 +268,9 @@ int main(int argc, char** argv) {
 	unsigned i;
 	{
 		int enable_api = 0;
-		add_macro("SCRIPT_API", req_api);
+		char abuf[16];
+		snprintf(abuf, sizeof abuf, "%s000", req_api);
+		add_macro("SCRIPT_API", abuf);
 		for(i=0;apiv[i];++i) {
 			char buf[64];
 			// enable only requested and lower APIs
