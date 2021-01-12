@@ -15,6 +15,44 @@
 // macro defined the deprecated API contents that were still active in
 // corresponding version are kept enabled; otherwise these are disabled.
 
+// -----------------------------------------------------------------------
+// limits of old Engine versions - extracted from "System limits" page
+// of ags.chm shipped with every release.
+// remove comments and save in CSV format to open in spreadsheet app.
+// "-" means: item is either not documented or mentioned as unlimited.
+// values in first row mean engine version: 300 == 3.0.0
+// -----------------------------------------------------------------------
+#if 0
+"feature in version",330,321,310,300,271,262,261
+"objects per room",40,40,40,40,20,20,20
+"(local) messages per room",100,100,100,100,100,100,100
+"global messages",-,-,-,-,500,500,500
+"(state-saving*) rooms per game (*: since 300)",299,299,299,299,299,299,299
+"inventory items",300,300,300,300,300,300,300
+"imported sprites",30000,30000,30000,30000,15000,15000,15000
+"sprites per folder",-,-,-,-,240,240,240
+"views",-,-,-,-,600,400,400
+"loops per view",-,-,-,-,16,16,16
+"frames per loop",-,-,-,-,20,20,20
+"characters",-,-,-,-,300,150,150
+"guis",-,-,-,-,50,40,40
+"controls per gui",30,30,30,30,30,30,30
+"total gui controls of each type",-,-,-,-,-,200,200
+"dialog topics",500,500,500,500,500,500,500
+"dialog-script messages",-,-,3000,3000,3000,3000,2000
+"options per (dialog) topic",30,30,30,30,30,30,30
+"screen overlays at a time",20,20,20,20,20,10,10
+"GlobalInts",-,-,500,500,500,500,500
+"GlobalStrings",-,-,50,50,50,50,50
+"interaction editor global variables",-,-,-,-,100,100,100
+"background frames per room",5,5,5,5,5,5,5
+"mouse cursors",20,20,20,20,20,20,20
+"audio channels",8,8,-,-,-,-,-
+"fonts",30,-,-,-,-,-,-
+#endif
+// -------------------------------------------------------------------------
+
+
 #define function int  // $AUTOCOMPLETEIGNORE$
 // CursorMode isn't actually defined yet, but int will do
 #define CursorMode int
