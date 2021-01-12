@@ -1,4 +1,5 @@
 extern int expand_macro(char* name, char* out);
+extern int defined_macro(char *name);
 extern void c_cc_error(char* msg);
 
 #define error(X) c_cc_error(X)
@@ -310,11 +311,31 @@ static int evaluate_condition(struct tokenizer *t, int *result) {
 		return 0;
 	}
 #endif
+	// first pass: expand all macros and defined(foo)
 	while(1) {
 		ret = tokenizer_next(t, &curr);
 		if(!ret) return ret;
 		if(curr.type == TT_IDENTIFIER) {
-			expand_macro(t->buf, bufp);
+			if(!strcmp(t->buf, "defined")) {
+				ret = tokenizer_next(t, &curr);
+				if(!ret || !(curr.type == TT_SEP && curr.value == '(')) {
+					error("expected ( after defined");
+					return ret;
+				}
+				ret = tokenizer_next(t, &curr);
+				if(!ret || curr.type != TT_IDENTIFIER) {
+					error("expected identifier after defined(");
+					return ret;
+				}
+				char *ou = defined_macro(t->buf) ? "1" : "0";
+				strcat(bufp, ou);
+				ret = tokenizer_next(t, &curr);
+				if(!ret || !(curr.type == TT_SEP && curr.value == ')')) {
+					error("expected ) after defined(ID");
+					return ret;
+				}
+			} else
+				expand_macro(t->buf, bufp);
 			bufp += strlen(bufp);
 		} else if(curr.type == TT_SEP) {
 			if(curr.value == '\\')
@@ -338,6 +359,7 @@ static int evaluate_condition(struct tokenizer *t, int *result) {
 #ifdef DEBUG
 	dprintf(2, "evaluating condition %s\n", bufp);
 #endif
+	// second pass: evaluate expanded contents
 	struct tokenizer t2;
 	FILE *f = tokenizer_from_string(&t2, buf);
 	ret = do_eval(&t2, result);
