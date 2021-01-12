@@ -909,7 +909,13 @@ import void SetObjectView(int object, int view);
 import void SetObjectTransparency(int object, int amount);
 import void MoveObject(int object, int x, int y, int speed);
 import void MoveObjectDirect(int object, int x, int y, int speed);
+#if SCRIPT_API <= 261000
+void SetObjectPosition(int obj, int tox, int toy) {
+	MoveObject(obj, tox, toy, -1);
+}
+#else
 import void SetObjectPosition(int object, int x, int y);
+#endif
 import int  AreObjectsColliding(int object1, int object2);
 import void GetObjectName(int object, string buffer);
 import int  GetObjectX(int object);
@@ -1502,7 +1508,11 @@ builtin managed struct Slider;
 builtin managed struct TextBox;
 builtin managed struct InvWindow;
 builtin managed struct ListBox;
+#if SCRIPT_API < 271000
+builtin struct Character;
+#else
 builtin managed struct Character;
+#endif
 #ifdef SCRIPT_API_v350
 builtin managed struct TextWindowGUI;
 #endif
@@ -1646,6 +1656,7 @@ builtin managed struct TextBox extends GUIControl {
 #endif
 };
 
+#if SCRIPT_API >= 271000
 builtin managed struct InvWindow extends GUIControl {
   /// Scrolls the inventory window down one row.
   import void ScrollDown();
@@ -1668,6 +1679,7 @@ builtin managed struct InvWindow extends GUIControl {
   /// Gets the number of visible rows in this inventory window.
   readonly import attribute int RowCount;
 };
+#endif
 
 builtin managed struct ListBox extends GUIControl {
 	/// Adds a new item to the bottom of the list with the specified text.
@@ -2860,8 +2872,11 @@ builtin struct Screen {
 #endif
 
 
-
+#if SCRIPT_API < 271000
+import readonly Character player;
+#else
 import readonly Character *player;
+#endif
 import Mouse mouse;
 #ifdef SCRIPT_COMPAT_v350
 import System system;
