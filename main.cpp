@@ -27,6 +27,13 @@ static int usage(char *argv0) {
 	for(unsigned i=0;apiv[i];++i) fprintf(stderr, " %s", apiv[i]);
 	fprintf(stderr, "\n   default: 350\n"
 	"-a ABI version: same as above, but restricts the emitted bytecode\n"
+	"-f option=value: set a compiler option. recognized options:\n"
+	);
+	for(unsigned i=0; i < SCOPT_NUMOPTS; ++i)
+		fprintf(stderr, "   %s (1/0) - %s\n",
+			ccOptionNameString(1<<i),
+			ccOptionHelpString(1<<i));
+	fprintf(stderr,
 	"-i systemheaderdir : provide path to system headers\n"
 	"   this is the path containing implicitly included headers (atm only agsdefns.sh).\n"
 	"-H 1.ash[:2.ash...] : colon-separated list of headers to include.\n"
@@ -164,6 +171,30 @@ static int load_headers(char* headers, int ext) {
 	return 1;
 }
 
+static void process_compiler_option(char *option) {
+	char *p = strchr(option, '=');
+	if(!p) {
+		fprintf(stderr, "error: option %s lacks equals sign\n", option);
+		exit(1);
+	}
+	*p = 0;
+	int bit = ccOptionStringToBit(option);
+	if(!bit) {
+		fprintf(stderr, "error: option %s unknown\n", option);
+		exit(1);
+	}
+	ccSetOption(bit, atoi(p+1));
+}
+
+static void set_compiler_default_options(void) {
+        ccSetSoftwareVersion("3.5.0.12");
+	ccSetOption(SCOPT_LINENUMBERS, 0);
+        ccSetOption(SCOPT_EXPORTALL, 1);
+        ccSetOption(SCOPT_NOIMPORTOVERRIDE, 0);
+        ccSetOption(SCOPT_LEFTTORIGHT, 1);
+        ccSetOption(SCOPT_OLDSTRINGS, 1);
+}
+
 static int search_path_bin(const char *bin, char *buf, size_t buflen) {
 	char *p = getenv("PATH"), *o;
 	size_t l;
@@ -227,12 +258,16 @@ int main(int argc, char** argv) {
 	char *headers = 0;
 	char *cppcmd = 0;
 	char *req_api = "350";
-	ccSetOption(SCOPT_LINENUMBERS, 0);
 	char *systemhdr_dir = NULL;
-	while((c = getopt(argc, argv, "gWESD:A:a:i:H:o:P:")) != EOF) switch(c) {
-		case 'a': if(optarg[0] == '2') cc_set_max_command(SCMD_SHIFTRIGHT); break;
+	int abi = 350;
+
+	set_compiler_default_options();
+
+	while((c = getopt(argc, argv, "gWESD:A:a:f:i:H:o:P:")) != EOF) switch(c) {
+		case 'a': abi = atoi(optarg); break;
 		case 'A': req_api = optarg; break;
 		case 'i': systemhdr_dir = optarg; break;
+		case 'f': process_compiler_option(optarg); break;
 		case 'o': oname = optarg; break;
 		case 'H': headers = optarg; break;
 		case 'P': cppcmd = optarg; break;
@@ -261,7 +296,6 @@ int main(int argc, char** argv) {
 	add_macro("__ASCC_MINOR__", "5");
 
 	// Editor/AGS.Editor/AGSEditor.cs
-	add_macro("AGS_NEW_STRINGS", "1");
 	add_macro("AGS_SUPPORTS_IFVER", "1");
 
 	// FIXME: these should all be toggled by options
@@ -270,6 +304,18 @@ int main(int argc, char** argv) {
 	//add_macro("STRICT_STRINGS", "1");
 	//add_macro("STRICT_AUDIO", "1");
 	add_macro("NEW_DIALOGOPTS_API", "1");
+
+        // Don't allow them to override imports in the room script
+	// FIXME needs better check for whether it's a roomfile
+        ccSetOption(SCOPT_NOIMPORTOVERRIDE, !!strstr(filename, "room") );
+
+	if(abi < 271) {
+		cc_set_max_command(SCMD_SHIFTRIGHT);
+		ccSetOption(SCOPT_CHECKBOUNDS, 0);
+		//ccSetOption(SCOPT_EXPLICITRET, 0);
+	} else {
+		add_macro("AGS_NEW_STRINGS", "1");
+	}
 
 	unsigned i;
 	{
@@ -296,16 +342,6 @@ int main(int argc, char** argv) {
 			}
 		}
 	}
-
-        ccSetSoftwareVersion("3.5.0.12");
-
-        ccSetOption(SCOPT_EXPORTALL, 1);
-        // Don't allow them to override imports in the room script
-	// FIXME better check for whether it's a roomfile
-        ccSetOption(SCOPT_NOIMPORTOVERRIDE, !!strstr(filename, "room") );
-
-        ccSetOption(SCOPT_LEFTTORIGHT, 1 /* FIXME: optional */);
-        ccSetOption(SCOPT_OLDSTRINGS, 1 /* FIXME: optional */);
 
 	char filename_wo_ext[2048];
 	char *p = filename, *e = strrchr(filename, '.');
