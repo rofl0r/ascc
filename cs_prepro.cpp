@@ -9,6 +9,7 @@
 #include "cs_compiler.h"
 
 #include <string.h>
+#include <ctype.h>
 
 /* hunk here is from ags rev 89b367eda29b47a2c7163e39e0baa2c3286837aa */
 
@@ -173,7 +174,7 @@ void pre_process_directive(char*dirpt,FMEM*outfl) {
 	case di_define: {
 		char nambit[100];
 		int nin=0;
-		while ((!is_whitespace(shal[0])) && (shal[0]!=0)) {
+		while ((!isspace(shal[0])) && (shal[0]!=0)) {
 			nambit[nin]=shal[0];
 			nin++;
 			shal++;
