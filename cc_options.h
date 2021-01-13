@@ -33,10 +33,18 @@
 
 #define SCOPT_NUMOPTS 11
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern const char* ccOptionNameString(int optbit);
 extern const char* ccOptionHelpString(int optbit);
 extern int ccOptionStringToBit(char*);
 extern void ccSetOption(int, int);
 extern int ccGetOption(int);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
