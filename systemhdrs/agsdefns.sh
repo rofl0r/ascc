@@ -2911,7 +2911,7 @@ builtin struct Screen {
 
 
 #if SCRIPT_API < 271000
-import readonly Character player;
+import Character player;
 #else
 import readonly Character *player;
 #endif
