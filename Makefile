@@ -8,7 +8,7 @@ ASCC_SRCS = \
 	fmem.cpp \
 	cc_compiledscript.cpp \
 	cs_parser_common.cpp \
-	cc_options.cpp \
+	cc_options.c \
 	cc_error_at_line.cpp \
 	cc_script.cpp \
 	util_string_compat.c \
