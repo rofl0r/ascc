@@ -32,6 +32,7 @@ static const struct {
 	{SCOPT_OLDSTRINGS, "oldstrings", "allow old-style strings"},
 	{SCOPT_CHECKBOUNDS, "checkbounds", "emit array boundary check instructions. makes code slower but could be helpful for debugging."},
 	{SCOPT_EXPLICITRET, "explicitret","emit explicit return 0 value in non-void functions closing without return"},
+	{SCOPT_OLDNEGATE, "oldnegate", "emit old inefficient code loading a negative literal"},
 	{0, 0, 0}
 };
 

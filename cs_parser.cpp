@@ -1986,7 +1986,14 @@ int do_variable_memory_access(ccCompiledScript *scrip, int variableSym,
     if (accept_literal_or_constant_value(variableSym, varSymValue, negateLiteral, "Error parsing integer value") < 0) {
       return -1;
     }
-    scrip->write_cmd2(SCMD_LITTOREG,SREG_AX, varSymValue);
+    if(negateLiteral && varSymValue < 0 && ccGetOption(SCOPT_OLDNEGATE)!=0) {
+      scrip->write_cmd2(SCMD_LITTOREG, SREG_AX, varSymValue*-1);
+      scrip->write_cmd2(SCMD_LITTOREG, SREG_BX, 0);
+      scrip->write_cmd2(SCMD_SUBREG, SREG_BX, SREG_AX);
+      scrip->write_cmd2(SCMD_REGTOREG, SREG_BX, SREG_AX);
+    } else {
+      scrip->write_cmd2(SCMD_LITTOREG,SREG_AX, varSymValue);
+    }
     gotValType = sym.normalIntSym;
   }
   else if (mainVariableType == SYM_LITERALFLOAT) {
