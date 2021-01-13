@@ -185,6 +185,7 @@ enum HorizontalAlignment {
 enum Alignment {
   eAlignLeft = 1,
   eAlignCentre = 2,
+  eAlignCenter = 2,
   eAlignRight = 3
 };
 #endif
@@ -692,7 +693,7 @@ import void DisplayMessageBar(int y, int textColor, int backColor, const string 
 import void ResetRoom(int roomNumber);
 /// Checks whether the player has been in the specified room yet.
 import int  HasPlayerBeenInRoom(int roomNumber);
-#ifdef SCRIPT_COMPAT_v335
+#if defined(SCRIPT_COMPAT_v335) || SCRIPT_API <= 335000
 /// Performs default processing of a mouse click at the specified co-ordinates.
 import void ProcessClick(int x, int y, CursorMode);
 #endif
@@ -734,7 +735,7 @@ import void DeleteSaveSlot(int slot);
 import void SetRestartPoint();
 /// Gets what type of thing is in the room at the specified co-ordinates.
 import LocationType GetLocationType(int x, int y);
-#ifdef SCRIPT_COMPAT_v350
+#if defined(SCRIPT_COMPAT_v350) || SCRIPT_API <= 350000
 /// Returns which walkable area is at the specified position on screen.
 import int  GetWalkableAreaAt(int screenX, int screenY);
 #endif
@@ -2925,9 +2926,10 @@ import Object object[MAX_ROOM_OBJECTS];
 import int   gs_globals[MAX_LEGACY_GLOBAL_VARS];
 import short savegameindex[MAX_LISTBOX_SAVED_GAMES];
 import ColorType palette[PALETTE_SIZE];
-#endif
-#ifndef SCRIPT_API_v330
+#else
+#if SCRIPT_API >= 271000
 import Object object[40];
+#endif
 import int   gs_globals[50];
 import short savegameindex[50];
 import ColorType palette[256];
