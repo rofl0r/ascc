@@ -3469,8 +3469,12 @@ int parse_variable_declaration(long cursym,int *next_type,int isglobal,
     else if (getsvalue == NULL)
       // local string, so the memory chunk pointer needs to be written
       scrip->write_cmd1(SCMD_MEMWRITE, SREG_CX);
-    else  // local variable without initial value -- zero it
-      scrip->write_cmd1(SCMD_ZEROMEMORY, varsize);
+    else { // local variable without initial value -- zero it
+      if(compiler_max_command >= SCMD_ZEROMEMORY)
+        scrip->write_cmd1(SCMD_ZEROMEMORY, varsize);
+      else
+        scrip->write_cmd2(SCMD_WRITELIT, varsize, 0);
+    }
 
     if (need_fixup == 1) {
       sym.entries[cursym].flags |= SFLG_STRBUFFER;
