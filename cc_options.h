@@ -30,8 +30,9 @@
 #define SCOPT_CHECKBOUNDS      (1<<8)   // emit array boundary check instructions. makes code slower but could be helpful for debugging.
 #define SCOPT_EXPLICITRET      (1<<9)   // emit explicit 0 return value in non-void functions closing without return
 #define SCOPT_OLDNEGATE        (1<<10)  // emit old inefficient code loading a negative literal
+#define SCOPT_POINTERHACK      (1<<11)  // enable hack that allows pointers/strings and ints to be used interchangeably
 
-#define SCOPT_NUMOPTS 11
+#define SCOPT_NUMOPTS 12
 
 #ifdef __cplusplus
 extern "C" {
