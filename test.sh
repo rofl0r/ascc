@@ -1,9 +1,13 @@
 #!/bin/sh
 for i in tests/*.c ; do
-	printf "testing %s..." "$i"
+	printf "testing %s... " "$i"
 	fn="${i%.*}"
-	if ! ./ascc $ASCCFLAGS -P "cpp -P -I tests" -i DEVNULL -S "$i" ; then
+	test "$VERBOSE" = 1 && echo "./ascc $ASCCFLAGS -P \"cpp -P -I tests\" -fpointerhack=1 -ffree-standing -S $i"
+	if ! ./ascc $ASCCFLAGS -P "cpp -P -I tests" -fpointerhack=1 -ffree-standing -S "$i" ; then
 		echo FAIL
+		continue
+	fi
+	if ! test -e "$fn".ret ; then
 		continue
 	fi
 	python make-executable.py "$fn".s
