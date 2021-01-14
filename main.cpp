@@ -16,6 +16,17 @@ static const char* apiv[] = {
 	"350", "341", "340", "335", "334", "330", "321", "261", 0
 };
 
+static int opt_freestanding;
+static const struct {
+	const char *name;
+	const char *help;
+	int *target;
+	int need_value;
+} cust_f_opts[] = {
+	{ "free-standing", "do not include systemheaders", &opt_freestanding, 0},
+	{ 0, 0 }
+};
+
 static int usage(char *argv0) {
 	fprintf(stderr, "usage: %s [OPTIONS] FILE.asc\n"
 	"compiles FILE.asc to FILE.o\n"
@@ -33,6 +44,9 @@ static int usage(char *argv0) {
 		fprintf(stderr, "   %s (1/0) - %s\n",
 			ccOptionNameString(1<<i),
 			ccOptionHelpString(1<<i));
+	for(unsigned i=0; cust_f_opts[i].name; ++i)
+		fprintf(stderr, "   %s (---) - %s\n",
+			cust_f_opts[i].name, cust_f_opts[i].help);
 	fprintf(stderr,
 	"-i systemheaderdir : provide path to system headers\n"
 	"   this is the path containing implicitly included headers (atm only agsdefns.sh).\n"
@@ -171,15 +185,33 @@ static int load_headers(char* headers, int ext) {
 	return 1;
 }
 
+static int process_custom_option(char *option, char *value) {
+	for(unsigned i = 0; cust_f_opts[i].name; ++i)
+		if(!strcmp(cust_f_opts[i].name, option)) {
+			if(cust_f_opts[i].need_value) {
+				if(!value) {
+					fprintf(stderr, "error: option %s requires value\n", option);
+					exit(1);
+				}
+				*cust_f_opts[i].target = atoi(value);
+			} else
+				*cust_f_opts[i].target = 1;
+			return 1;
+		}
+	return 0;
+}
+
 static void process_compiler_option(char *option) {
 	char *p = strchr(option, '=');
 	if(!p) {
+		if(process_custom_option(option, 0)) return;
 		fprintf(stderr, "error: option %s lacks equals sign\n", option);
 		exit(1);
 	}
 	*p = 0;
 	int bit = ccOptionStringToBit(option);
 	if(!bit) {
+		if(process_custom_option(option, p+1)) return;
 		fprintf(stderr, "error: option %s unknown\n", option);
 		exit(1);
 	}
@@ -343,6 +375,7 @@ int main(int argc, char** argv) {
 		}
 	}
 
+	FILE *f;
 	char filename_wo_ext[2048];
 	char *p = filename, *e = strrchr(filename, '.');
 	char *q = filename_wo_ext;
@@ -351,16 +384,16 @@ int main(int argc, char** argv) {
 	*q = 0;
 	q = getbasename(filename_wo_ext);
 
-	FILE *f;
-
-	snprintf(oname_buf, sizeof oname_buf, "%s/agsdefns.sh", systemhdr_dir?systemhdr_dir:"systemhdrs");
-	f = fopen(oname_buf, "r");
-	if(!f && !systemhdr_dir && search_executable_dir(argv[0], exepath, sizeof exepath)) {
-		snprintf(oname_buf, sizeof oname_buf, "%s/%s/agsdefns.sh", exepath, "systemhdrs");
+	if(!opt_freestanding) {
+		snprintf(oname_buf, sizeof oname_buf, "%s/agsdefns.sh", systemhdr_dir?systemhdr_dir:"systemhdrs");
 		f = fopen(oname_buf, "r");
+		if(!f && !systemhdr_dir && search_executable_dir(argv[0], exepath, sizeof exepath)) {
+			snprintf(oname_buf, sizeof oname_buf, "%s/%s/agsdefns.sh", exepath, "systemhdrs");
+			f = fopen(oname_buf, "r");
+		}
+		if(!f) fprintf(stderr, "warning: default header agsdefns.sh not found, you may want to set -i to the dir containing it!\n");
+		else preproc_add(f, "_BuiltInScriptHeader.ash", !!cppcmd);
 	}
-	if(!f) fprintf(stderr, "warning: default header agsdefns.sh not found, you may want to set -i to the dir containing it!\n");
-	else preproc_add(f, "_BuiltInScriptHeader.ash", !!cppcmd);
 	if(headers && !load_headers(headers, !!cppcmd)) return 1;
 
 	if(oname == oname_buf) {
