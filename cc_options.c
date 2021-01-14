@@ -33,6 +33,7 @@ static const struct {
 	{SCOPT_CHECKBOUNDS, "checkbounds", "emit array boundary check instructions. makes code slower but could be helpful for debugging."},
 	{SCOPT_EXPLICITRET, "explicitret","emit explicit return 0 value in non-void functions closing without return"},
 	{SCOPT_OLDNEGATE, "oldnegate", "emit old inefficient code loading a negative literal"},
+	{SCOPT_POINTERHACK, "pointerhack", "enable hack that allows pointers/strings and ints to be used interchangeably. required for emulation of pointer-to-pointer until it is properly implemented for some low-level code. not recommended for use in AGS."},
 	{0, 0, 0}
 };
 

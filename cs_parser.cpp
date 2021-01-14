@@ -1238,11 +1238,13 @@ int check_type_mismatch(int typeIs, int typeWantsToBe, int orderMatters) {
     numstrings++;
   if (is_string(typeWantsToBe))
     numstrings++;
-  if (numstrings == 1 && !(is_int(typeIs) || is_int(typeWantsToBe))) {
+  if (numstrings == 1) {
+    // we allow to turn char* or char[] addresses into ints and vice versa
+    // if -fpointerhack=1 is passed, to enable some low-level routines
+    // to be written.
+    if(ccGetOption(SCOPT_POINTERHACK)!=0 && (is_int(typeIs) || is_int(typeWantsToBe)))
+      return 0;
     isTypeMismatch = 1;
-  } else {
-    // it's ok to turn char* or char[] addresses into ints
-    return 0;
   }
 
   // can convert String* to const string
