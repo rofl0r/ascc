@@ -2913,6 +2913,8 @@ builtin struct Screen {
 
 #if SCRIPT_API < 271000
 import Character player;
+#define ICONBAR FindGUIID("ICONBAR")
+#define INVENTORY FindGUIID("INVENTORY")
 #else
 import readonly Character *player;
 #endif
