@@ -1966,7 +1966,8 @@ int do_variable_memory_access(ccCompiledScript *scrip, int variableSym,
                               int soffset, bool isPointer,
                               bool wholePointerAccess,
                               int mainVariableSym, int mainVariableType,
-                              bool isDynamicArray, bool negateLiteral) {
+                              bool isDynamicArray, bool negateLiteral,
+                              int extra_struct_offset) {
   int gotValType = 0;
   int readcmd = get_readcmd_for_size(sym.entries[variableSym].ssize, writing);
 
@@ -2065,6 +2066,9 @@ int do_variable_memory_access(ccCompiledScript *scrip, int variableSym,
       wholePointerAccess = true;
       gotValType |= STYPE_DYNARRAY;
     }
+
+    if (extra_struct_offset)
+      scrip->write_cmd2(SCMD_ADD, SREG_MAR, extra_struct_offset);
 
     if ((wholePointerAccess) && (writing))
       scrip->write_cmd1(SCMD_MEMWRITEPTR, SREG_AX);
@@ -2189,8 +2193,14 @@ int do_variable_ax(int slilen,long*syml,ccCompiledScript*scrip,int writing, int 
     // end of the path, not an intermediate pathing property
     bool writingThisTime = isLastClause && writing;
 
+    // offset to add to CX after array index is calculated for struct member in dynarray
+    int array_struct_offset_add = 0;
+
     if (sym.entries[variableSym].flags & SFLG_PROPERTY) { }
     else if (sym.entries[variableSym].flags & SFLG_IMPORTED) { }
+    else if (isDynamicArray && variableSymType == SYM_STRUCTMEMBER) {
+      array_struct_offset_add = sym.entries[variableSym].soffs;
+    }
     else if ((variableSymType == SYM_GLOBALVAR) || (variableSymType == SYM_LOCALVAR) ||
         (variableSymType == SYM_STRUCTMEMBER) || (variableSymType == SYM_STRING)) {
       // since the member has a fixed offset into the structure, don't
@@ -2446,11 +2456,12 @@ int do_variable_ax(int slilen,long*syml,ccCompiledScript*scrip,int writing, int 
                                     currentByteOffset, isPointer,
                                     accessActualPointer,
                                     firstVariableSym, firstVariableType,
-                                    isDynamicArray, negateLiteral))
+                                    isDynamicArray, negateLiteral, array_struct_offset_add))
         return -1;
 
       // reset stuff
       currentByteOffset = 0;
+      array_struct_offset_add = 0;
       isArrayOffset = false;
       isPointer = false;
       isDynamicArray = false;
@@ -2564,11 +2575,6 @@ int parse_sub_expr(long*symlist,int listlen,ccCompiledScript*scrip) {
           {
             isManagedType = true;
             size = 4;
-          }
-          else if (sym.entries[arrayType].flags & SFLG_STRUCTTYPE)
-          {
-            cc_error("cannot create dynamic array of unmanaged struct");
-            return -1;
           }
 
           scrip->write_cmd3(SCMD_NEWARRAY, SREG_AX, size, isManagedType);
