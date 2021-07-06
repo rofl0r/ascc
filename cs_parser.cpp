@@ -1243,12 +1243,22 @@ int check_type_mismatch(int typeIs, int typeWantsToBe, int orderMatters) {
     numstrings++;
   if (is_string(typeWantsToBe))
     numstrings++;
-  if (numstrings == 1) {
-    // we allow to turn char* or char[] addresses into ints and vice versa
-    // if -fpointerhack=1 is passed, to enable some low-level routines
-    // to be written.
-    if(ccGetOption(SCOPT_POINTERHACK)!=0 && (is_int(typeIs) || is_int(typeWantsToBe)))
+
+  // we allow to turn char* or char[] addresses into ints and vice versa
+  // if -fpointerhack=1 is passed, to enable some low-level routines
+  // to be written.
+  if (ccGetOption(SCOPT_POINTERHACK)!=0) {
+    if (numstrings == 1 && (is_int(typeIs) || is_int(typeWantsToBe)))
       return 0;
+    if (is_int(typeIs) && (typeWantsToBe & STYPE_POINTER) &&
+        is_integral_type(typeWantsToBe & ~STYPE_POINTER))
+      return 0;
+    if (is_int(typeWantsToBe) && (typeIs & STYPE_POINTER) &&
+        is_integral_type(typeIs & ~STYPE_POINTER))
+      return 0;
+  }
+
+  if (numstrings == 1) {
     isTypeMismatch = 1;
   }
 
