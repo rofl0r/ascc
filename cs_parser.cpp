@@ -1338,7 +1338,8 @@ int check_type_mismatch(int typeIs, int typeWantsToBe, int orderMatters) {
 static int isRawPointer(int n) {
   return sym.entries[n].vartype == sym.normalIntSym &&
          sym.entries[n].flags & SFLG_ARRAY &&
-         sym.entries[n].arrsize == 0;
+         sym.entries[n].arrsize == 0 &&
+         (sym.entries[n].flags & SFLG_DYNAMICARRAY) == 0;
 }
 
 int isVCPUOperatorBoolean(int scmdtype) {
