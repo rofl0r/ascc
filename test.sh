@@ -8,6 +8,7 @@ for i in tests/*.c ; do
 		continue
 	fi
 	if ! test -e "$fn".ret ; then
+		echo OK
 		continue
 	fi
 	python make-executable.py "$fn".s
