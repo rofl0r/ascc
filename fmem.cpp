@@ -80,11 +80,16 @@ void fmem_putc(char toput,FMEM*fill) {
   }
 
 void fmem_puts(char*strin,FMEM*ooo) {
-  char*ibuffer=(char*)malloc(strlen(strin)+10);
-  sprintf(ibuffer,"%s\r\n",strin);
-  fmem_write(ibuffer,strlen(ibuffer),ooo);
-  free(ibuffer);
-  }
+  char buf[1024], *p;
+  size_t l = strlen(strin);
+  if(l+3 < sizeof buf)
+    p = buf;
+  else
+    p = (char*)malloc(l+3);
+  sprintf(p, "%s\r\n",strin);
+  fmem_write(p,l+2,ooo);
+  if(p != buf) free(p);
+}
 
 int fmem_getc(FMEM*fme) {
   int toret=fme->data[fme->pos];
@@ -112,10 +117,10 @@ void fmem_gets(FMEM*fmem,char*bufrr) {
     if (tval==0) break;
     if (fmem_eof(fmem)) break;
     } while ((tval != 13) && (tval != 10));
-  if ((fmem_eof(fmem)==0) && (fmem_peekc(fmem)==10))
+  if ((fmem_eof(fmem)==0) && tval == '\r' && (fmem_peekc(fmem)==10))
     fmem_getc(fmem);  // LF
-  if (bufrr[bindx-1] == 13)
-    bindx--;    // strip CR
+  if (tval == 13 || tval == 10)
+    bindx--;    // strip CR, if it was CRLF, else LF
 
   bufrr[bindx]=0;
   }
