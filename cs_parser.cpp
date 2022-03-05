@@ -206,7 +206,7 @@ int cc_tokenize(const char*inpl, ccInternalList*targ, ccCompiledScript*scrip) {
         }
         thissymbol[symlen]=0;
         if (thissymbol[0] == '0' && thissymbol[1] == 'x' && isxdigit(thissymbol[2])) {
-            long tmp = strtol(thissymbol, (char**) 0, 16);
+            long tmp = strtoul(thissymbol, (char**) 0, 16);
             sprintf(thissymbol, "%d", (int)tmp);
         }
         if ((thissymbol[0] == '\'') && (thissymbol[2] == '\'')) {
