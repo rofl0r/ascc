@@ -2148,6 +2148,7 @@ builtin struct System {
   /// Gets/sets whether sprites are rendered at screen resolution or native game resolution.
   import static attribute bool RenderAtScreenResolution;
 #endif
+import static void Log(int level, const string format, ...);    // $AUTOCOMPLETESTATICONLY$
 };
 
 enum BlockingStyle {
