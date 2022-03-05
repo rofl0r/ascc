@@ -98,6 +98,10 @@ int is_part_of_symbol(char thischar, char startchar) {
         if (thischar == startchar) sayno_next_char = 1;
         return 1;
     }
+    if (startchar == '0' && thischar == 'x') {
+        // a hexadecimal number
+        return 1;
+    }
     // a decimal number
     if ((startchar >= '0') && (startchar <= '9')) {
         if ((thischar >= '0') && (thischar <= '9'))
@@ -192,13 +196,19 @@ int cc_tokenize(const char*inpl, ccInternalList*targ, ccCompiledScript*scrip) {
         int symlen=1;
         thissymbol[0]=thischar;
         int thisIsEscaped = 0;
-        while (is_part_of_symbol(fmem_peekc(iii),thischar)) {
+        while (is_part_of_symbol(fmem_peekc(iii),thischar) ||
+               (thischar == '0' && symlen >= 2 && thissymbol[1] == 'x' && isxdigit(fmem_peekc(iii)))
+        ) {
 
             thissymbol[symlen] = fmem_getc(iii);
             symlen++;
             if (symlen >= MAX_SYM_LEN - 1) break;
         }
         thissymbol[symlen]=0;
+        if (thissymbol[0] == '0' && thissymbol[1] == 'x' && isxdigit(thissymbol[2])) {
+            long tmp = strtol(thissymbol, (char**) 0, 16);
+            sprintf(thissymbol, "%d", (int)tmp);
+        }
         if ((thissymbol[0] == '\'') && (thissymbol[2] == '\'')) {
             // convert the character to its ASCII equivalent
             sprintf(thissymbol,"%d",thissymbol[1]);
@@ -221,7 +231,10 @@ int cc_tokenize(const char*inpl, ccInternalList*targ, ccCompiledScript*scrip) {
             cc_error("symbol table overflow - could not ensure new symbol.");
             return -1;
         }
-        if ((thissymbol[0] >= '0') && (thissymbol[0] <= '9')) {
+        if (
+            (thissymbol[0] >= '0') && (thissymbol[0] <= '9') ||
+            (thissymbol[0] == '-' && (thissymbol[1] >= '0') && (thissymbol[1] <= '9'))
+        ) {
             if (strchr(thissymbol, '.') != NULL)
                 sym.entries[towrite].stype = SYM_LITERALFLOAT;
             else
