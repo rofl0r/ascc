@@ -28,7 +28,8 @@ jobs:
           CYGWIN: winsymlinks:native
         run: |
              make --version
-             DEST=agsutils-cygwin-git
+             DEST=ascc-cygwin-git
+             gcc -dM -E - < /dev/null
              make CFLAGS="-O2 -g0 -fno-strict-aliasing" CXXFLAGS="-O2 -g0" LDFLAGS=-s prefix= DESTDIR="$DEST" all install || exit 1
              cp /cygdrive/c/cygwin/bin/cygwin1.dll "$DEST"/bin/ && echo "copy OK"
              echo "current dir: $PWD"
