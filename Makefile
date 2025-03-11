@@ -1,3 +1,6 @@
+prefix=/usr/local
+bindir=$(prefix)/bin
+
 ASCC_SRCS = \
 	main.cpp \
 	cs_parser.cpp \
@@ -23,8 +26,9 @@ ASCC_SRCS = \
 TEMPOBJS = $(ASCC_SRCS:.cpp=.o)
 ASCC_OBJS = $(TEMPOBJS:.c=.o)
 
-CXXFLAGS += -fpermissive -O0 -g3
-CFLAGS += -O0 -g3
+-include config.mak
+
+CXXFLAGS += -fpermissive
 
 all: ascc
 
@@ -37,5 +41,8 @@ clean:
 test:
 	sh test.sh
 
+install: ascc
+	install -Dm 644 ascc $(DESTDIR)$(bindir)/ascc
 
-.PHONY: all clean test
+
+.PHONY: all clean test install
