@@ -30,10 +30,25 @@ ASCC_OBJS = $(TEMPOBJS:.c=.o)
 
 CXXFLAGS += -fpermissive
 
-all: ascc
+TOOLCHAIN := $(shell $(CC) -dumpmachine || echo 'unknown')
 
-ascc: $(ASCC_OBJS)
-	$(CXX) -o ascc $(ASCC_OBJS)
+ifeq ($(findstring mingw,$(TOOLCHAIN)),mingw)
+WIN=1
+endif
+ifeq ($(findstring cygwin,$(TOOLCHAIN)),cygwin)
+WIN=1
+endif
+
+ifdef WIN
+EXE_EXT=.exe
+endif
+
+PROG=ascc$(EXE_EXT)
+
+all: $(PROG)
+
+$(PROG): $(ASCC_OBJS)
+	$(CXX) -o $@ $(ASCC_OBJS)
 
 clean:
 	rm -f ascc *.o
@@ -41,8 +56,8 @@ clean:
 test:
 	sh test.sh
 
-install: ascc
-	install -Dm 644 ascc $(DESTDIR)$(bindir)/ascc
+install: $(PROG)
+	install -Dm 644 $(PROG) $(DESTDIR)$(bindir)/$(PROG)
 
 
 .PHONY: all clean test install
