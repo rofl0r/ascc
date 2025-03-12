@@ -2,6 +2,8 @@
 #define MYFILESTREAM_H
 
 #include <stdio.h>
+#define ENDIANNESS_PORTABLE_CONVERSION 1
+#include "endianness.h"
 
 // this implements the bare minimum to get cc_compiler.Write()
 // working. the upstream filestream class pulls in a dozen of additional
@@ -29,14 +31,25 @@ public:
 	{
 		return Write(buffer, elem_size * count) / elem_size;
 	}
+	/* big endians must swap to little endian format */
+	inline int MustSwapBytes()
+	{
+		union { int i; char c; } u = { 1 };
+		return u.c ? 0 : 1;
+	}
+	inline size_t WriteAndConvertArrayOfInt32(const int32_t *buffer, size_t count) {
+		int32_t v;
+		for (unsigned i=0; i<count; ++i) {
+			v = end_htole32(buffer[i]);
+			Write(&v, 4);
+		}
+		return count;
+	}
 	inline size_t WriteArrayOfInt32(const int32_t *buffer, size_t count)
 	{
 		return
-#if 0
 			MustSwapBytes() ?
 				WriteAndConvertArrayOfInt32(buffer, count) :
-#endif
-#warning "this code is currently not working on big-endian"
 			WriteArray(buffer, sizeof(int32_t), count);
 	}
 	inline size_t  WriteInt32(int32_t val) {
