@@ -40,9 +40,16 @@
 
 #include <stdarg.h>
 #include <vector>
-#include "platform.h"
 #include "core_types.h"
 #include "debug_assert.h"
+
+#if defined(_DEBUG)
+    #define AGS_PLATFORM_DEBUG  (1)
+#elif ! defined(NDEBUG)
+    #define AGS_PLATFORM_DEBUG  (1)
+#else
+    #define AGS_PLATFORM_DEBUG  (0)
+#endif
 
 namespace AGS
 {
