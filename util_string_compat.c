@@ -14,7 +14,6 @@
 #include "util_string_compat.h"
 #include <ctype.h>
 #include <string.h>
-#include "platform.h"
 
 char *ags_strlwr(char *s)
 {
@@ -34,7 +33,7 @@ char *ags_strupr(char *s)
 
 int ags_stricmp(const char *s1, const char *s2)
 {
-#if AGS_PLATFORM_OS_WINDOWS
+#if defined(_WIN32)
     return stricmp(s1, s2);
 #else
     return strcasecmp(s1, s2);
@@ -43,7 +42,7 @@ int ags_stricmp(const char *s1, const char *s2)
 
 int ags_strnicmp(const char *s1, const char *s2, size_t n)
 {
-#if AGS_PLATFORM_OS_WINDOWS
+#if defined(_WIN32)
     return strnicmp(s1, s2, n);
 #else
     return strncasecmp(s1, s2, n);

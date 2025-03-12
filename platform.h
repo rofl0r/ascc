@@ -3,13 +3,6 @@
 
 // platform definitions. Not intended for replacing types or checking for libraries.
 
-#if defined(_WIN32)
-    //define something for Windows (32-bit and 64-bit)
-    #define AGS_PLATFORM_OS_WINDOWS (1)
-#else
-    #define AGS_PLATFORM_OS_WINDOWS (0)
-#endif
-
 #include "endianness.h"
 
 #if ENDIANNESS_LE
