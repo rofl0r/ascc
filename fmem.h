@@ -30,7 +30,7 @@ extern FMEM *fmem_open(const char *);
 extern void fmem_close(FMEM *);
 extern void fmem_write(char *, long, FMEM *);
 extern void fmem_putc(char, FMEM *);
-extern void fmem_puts(char *, FMEM *);
+extern void fmem_puts(const char *, FMEM *);
 extern int fmem_getc(FMEM *);
 extern int fmem_peekc(FMEM *);
 extern int fmem_eof(FMEM *);

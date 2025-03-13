@@ -289,7 +289,7 @@ int main(int argc, char** argv) {
 	char oname_buf[2048], *oname = oname_buf;
 	char *headers = 0;
 	char *cppcmd = 0;
-	char *req_api = "350";
+	const char *req_api = "350";
 	char *systemhdr_dir = NULL;
 	int abi = 350;
 

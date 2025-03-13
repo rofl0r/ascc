@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include "fmem.h"
 
-char*fmemcopyr="FMEM v1.00 (c) 2000 Chris Jones";
+const char* fmemcopyr="FMEM v1.00 (c) 2000 Chris Jones";
 #define FMEM_MAGIC 0xcddebeef
 
 FMEM*tempy;
@@ -79,7 +79,7 @@ void fmem_putc(char toput,FMEM*fill) {
   fmem_write(&templ[0],1,fill);
   }
 
-void fmem_puts(char*strin,FMEM*ooo) {
+void fmem_puts(const char*strin,FMEM*ooo) {
   char buf[1024], *p;
   size_t l = strlen(strin);
   if(l+3 < sizeof buf)
